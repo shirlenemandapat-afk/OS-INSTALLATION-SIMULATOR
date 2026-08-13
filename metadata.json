@@ -1,0 +1,6 @@
+{
+  "name": "OS Installation & BIOS Simulator",
+  "description": "An interactive OS installation and BIOS configuration simulator for Windows 7, 10, and 11 featuring custom student task assignment, rubrics, disk partitioning, real-time evaluation, and CSV score export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
