@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { EvaluationResult } from '../types';
 import { exportToCSV } from '../data/tasks';
-import { Award, Download, CheckCircle2, AlertTriangle, RotateCcw, User, FileText, Clock, Users } from 'lucide-react';
+import { saveStudentScoreToSupabase, SQL_SETUP_SCRIPT } from '../lib/supabase';
+import { Award, Download, CheckCircle2, AlertTriangle, RotateCcw, User, FileText, Clock, Users, Database, Copy, Check, Lock } from 'lucide-react';
 
 interface EvaluationDashboardProps {
   result: EvaluationResult;
@@ -14,17 +15,32 @@ export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
   onRestartTask,
   onOpenInstructorLogs
 }) => {
-  // Automatically save result to localStorage for instructor review
+  const [dbStatus, setDbStatus] = useState<'saving' | 'saved' | 'error'>('saving');
+  const [dbErrorMsg, setDbErrorMsg] = useState<string>('');
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [showRlsModal, setShowRlsModal] = useState(false);
+
+  // Automatically save result to Supabase database & localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('os_simulator_student_logs');
-      const logs: EvaluationResult[] = stored ? JSON.parse(stored) : [];
-      logs.unshift(result);
-      localStorage.setItem('os_simulator_student_logs', JSON.stringify(logs.slice(0, 100))); // keep latest 100
-    } catch (e) {
-      console.error('Failed to save student evaluation log:', e);
-    }
+    let isMounted = true;
+    saveStudentScoreToSupabase(result).then((res) => {
+      if (isMounted) {
+        if (res.success) {
+          setDbStatus('saved');
+        } else {
+          setDbStatus('error');
+          setDbErrorMsg(res.error || 'Row Level Security policy blocked anonymous insert.');
+        }
+      }
+    });
+    return () => { isMounted = false; };
   }, [result]);
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_SETUP_SCRIPT);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
 
   const handleExport = () => {
     exportToCSV(result);
@@ -40,6 +56,20 @@ export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Supabase DB Status Badge */}
+          <button
+            onClick={() => dbStatus === 'error' && setShowRlsModal(!showRlsModal)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border rounded-xl text-xs font-medium cursor-pointer transition-all ${
+              dbStatus === 'error' ? 'border-amber-500/80 hover:bg-slate-800' : 'border-slate-800'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5 text-sky-400" />
+            <span>DB Sync:</span>
+            {dbStatus === 'saving' && <span className="text-amber-400 font-bold animate-pulse">Syncing...</span>}
+            {dbStatus === 'saved' && <span className="text-emerald-400 font-bold">Saved to Supabase</span>}
+            {dbStatus === 'error' && <span className="text-amber-300 font-bold underline">RLS Policy Needed (?)</span>}
+          </button>
+
           <button
             onClick={handleExport}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 text-xs transition-all hover:scale-105"
@@ -49,13 +79,52 @@ export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
           </button>
           <button
             onClick={onOpenInstructorLogs}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 shadow flex items-center gap-2 transition-all"
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 shadow flex items-center gap-2 transition-all group"
+            title="Protected teacher portal - requires passcode"
           >
-            <Users className="w-4 h-4 text-indigo-400" />
+            <Lock className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
             <span>Gradebook</span>
           </button>
         </div>
       </header>
+
+      {/* RLS Policy Notice Banner if DB insert failed */}
+      {dbStatus === 'error' && (
+        <div className="max-w-5xl mx-auto w-full my-3 p-4 bg-amber-950/80 border border-amber-500/60 rounded-2xl text-xs text-amber-200 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <p className="font-bold text-amber-300">Supabase DB Notice: Row Level Security (RLS) Policy Active</p>
+              <p className="text-slate-300 text-[11px] mt-0.5">
+                {dbErrorMsg || 'Supabase tables exist, but Row Level Security is blocking anonymous student inserts.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCopySql}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl flex items-center gap-2 shadow text-xs shrink-0 cursor-pointer transition-all"
+          >
+            {copiedSql ? <Check className="w-4 h-4 text-slate-950" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedSql ? 'SQL Script Copied!' : 'Copy Fix SQL for Supabase'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* RLS Script Modal */}
+      {showRlsModal && (
+        <div className="max-w-5xl mx-auto w-full my-3 p-4 bg-slate-900 border border-indigo-800 rounded-2xl text-xs space-y-2">
+          <div className="flex items-center justify-between font-bold text-indigo-300">
+            <span>Fix Supabase Database Insert Policy (Copy & Run in Supabase SQL Editor):</span>
+            <button onClick={handleCopySql} className="text-emerald-400 hover:underline flex items-center gap-1 font-bold">
+              {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedSql ? 'Copied' : 'Copy Script'}</span>
+            </button>
+          </div>
+          <pre className="p-3 bg-slate-950 text-indigo-200 font-mono text-[11px] rounded-lg border border-slate-800 overflow-x-auto max-h-40">
+            {SQL_SETUP_SCRIPT}
+          </pre>
+        </div>
+      )}
 
       {/* Content Body */}
       <main className="max-w-5xl mx-auto w-full my-6 space-y-6 flex-1">

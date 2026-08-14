@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { SimulationState, StudentInfo, OSType, TaskRequirement, PartitionItem, EvaluationResult } from './types';
 import { getTaskForStudent, evaluateStudentConfig } from './data/tasks';
+import { saveStudentScoreToSupabase } from './lib/supabase';
 import { StudentPortal } from './components/StudentPortal';
 import { DesktopSimulator } from './components/DesktopSimulator';
 import { BiosSimulator } from './components/BiosSimulator';
+import { RebootSplashScreen } from './components/RebootSplashScreen';
+import { PoweredOffScreen } from './components/PoweredOffScreen';
 import { WindowsInstaller } from './components/WindowsInstaller';
 import { OobeSimulator } from './components/OobeSimulator';
 import { EvaluationDashboard } from './components/EvaluationDashboard';
@@ -73,12 +76,28 @@ export default function App() {
     });
   };
 
-  // Restart Computer action from Desktop
+  // Restart Computer action from Desktop or Installer
   const handleRestartComputer = () => {
     setState((prev) => ({
       ...prev,
       step: 'rebooting',
       rebootCount: prev.rebootCount + 1
+    }));
+  };
+
+  // Shut Down Computer action
+  const handleShutdownComputer = () => {
+    setState((prev) => ({
+      ...prev,
+      step: 'powered_off'
+    }));
+  };
+
+  // Power On Computer from Powered Off state
+  const handlePowerOnComputer = () => {
+    setState((prev) => ({
+      ...prev,
+      step: 'rebooting'
     }));
   };
 
@@ -124,16 +143,18 @@ export default function App() {
     }));
   };
 
-  // Finish OOBE and evaluate
+  // Finish OOBE and direct student to Desktop
   const handleFinishOobe = () => {
     const endTime = Date.now();
     const finalState = { ...state, endTime };
     const result = evaluateStudentConfig(finalState);
     setEvaluationData(result);
+    // Directly save evaluation result to Supabase database
+    saveStudentScoreToSupabase(result);
     setState((prev) => ({
       ...prev,
       endTime,
-      step: 'evaluation'
+      step: 'complete_desktop'
     }));
   };
 
@@ -147,60 +168,38 @@ export default function App() {
         />
       )}
 
-      {/* 2. Desktop Simulator Step */}
-      {state.step === 'desktop' && (
+      {/* 2. Desktop Simulator Step (Pre-Install or Post-Install) */}
+      {(state.step === 'desktop' || state.step === 'complete_desktop') && (
         <DesktopSimulator
           os={state.selectedOS}
           student={state.student}
           task={state.assignedTask}
+          simulationState={state.step === 'complete_desktop' ? state : undefined}
           onRestartComputer={handleRestartComputer}
+          onShutdownComputer={handleShutdownComputer}
           onBackToPortal={() => setState((prev) => ({ ...prev, step: 'portal' }))}
         />
       )}
 
-      {/* 3. Rebooting / BIOS Splash Screen */}
-      {state.step === 'rebooting' && (
-        <div className="fixed inset-0 bg-black flex flex-col items-center justify-between p-8 text-slate-100 z-50 font-mono select-none">
-          <div className="w-full text-xs text-slate-400 space-y-1">
-            <p>Main Processor: Intel Core i7-11700K @ 3.60GHz</p>
-            <p>Memory Testing: 16384K OK</p>
-            <p>Primary Master: SSD 0 ({state.assignedTask.diskSizeGB} GB)</p>
-            <p>USB Storage Device: Virtual Bootable Installer USB Flash Drive</p>
-          </div>
-
-          <div className="text-center space-y-6 my-auto">
-            <Loader2 className="w-12 h-12 text-amber-400 mx-auto animate-spin" />
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-amber-300">SYSTEM REBOOTING...</h2>
-              <p className="text-xs text-slate-300">
-                Press <kbd className="bg-slate-800 text-amber-300 px-2 py-1 rounded border border-slate-700 font-bold">DEL</kbd> or <kbd className="bg-slate-800 text-amber-300 px-2 py-1 rounded border border-slate-700 font-bold">F2</kbd> now to enter BIOS / UEFI Setup Utility.
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-4 pt-4">
-              <button
-                onClick={handleEnterBios}
-                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
-              >
-                [DEL / F2] Enter BIOS Setup
-              </button>
-
-              <button
-                onClick={handleBootInstallerDirectly}
-                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition-all"
-              >
-                Skip BIOS & Boot OS Media Direct
-              </button>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-500">
-            Press DEL to run Setup | Press F12 for BBS Boot Menu
-          </div>
-        </div>
+      {/* 3. Powered Off State */}
+      {state.step === 'powered_off' && (
+        <PoweredOffScreen
+          onPowerOn={handlePowerOnComputer}
+        />
       )}
 
-      {/* 4. BIOS Setup Utility */}
+      {/* 4. Rebooting / BIOS Splash Screen (Enforces Keyboard Only Navigation) */}
+      {state.step === 'rebooting' && (
+        <RebootSplashScreen
+          diskSizeGB={state.assignedTask.diskSizeGB}
+          biosConfig={state.biosConfig}
+          selectedOS={state.selectedOS}
+          onEnterBios={handleEnterBios}
+          onBootInstaller={handleBootInstallerDirectly}
+        />
+      )}
+
+      {/* 5. BIOS Setup Utility */}
       {state.step === 'bios' && (
         <BiosSimulator
           os={state.selectedOS}
@@ -210,7 +209,7 @@ export default function App() {
         />
       )}
 
-      {/* 5. Windows Installer Steps */}
+      {/* 6. Windows Installer Steps */}
       {state.step.startsWith('installer_') && (
         <WindowsInstaller
           os={state.selectedOS}
@@ -218,6 +217,8 @@ export default function App() {
           state={state}
           onUpdateState={handleUpdateSimulationState}
           onCompleteInstallation={handleCompleteInstaller}
+          onRestartComputer={handleRestartComputer}
+          onShutdownComputer={handleShutdownComputer}
         />
       )}
 

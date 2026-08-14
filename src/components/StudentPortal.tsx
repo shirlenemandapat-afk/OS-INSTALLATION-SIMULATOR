@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StudentInfo, OSType, TaskRequirement } from '../types';
 import { getTaskForStudent, DEFAULT_RUBRICS } from '../data/tasks';
-import { Monitor, User, Layers, FileText, ArrowRight, ShieldCheck, Cpu, HardDrive, CheckCircle2, History, AlertCircle } from 'lucide-react';
+import { Monitor, User, Layers, FileText, ArrowRight, ShieldCheck, Cpu, HardDrive, CheckCircle2, History, AlertCircle, Lock } from 'lucide-react';
 
 interface StudentPortalProps {
   onStartSimulator: (student: StudentInfo, os: OSType, task: TaskRequirement) => void;
@@ -56,9 +56,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ onStartSimulator, 
 
         <button
           onClick={onOpenInstructorLogs}
-          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm flex items-center gap-2 transition-all"
+          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm flex items-center gap-2 transition-all group"
+          title="Protected teacher portal - requires passcode"
         >
-          <History className="w-4 h-4 text-indigo-400" />
+          <Lock className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
           <span>Instructor Records & Gradebook</span>
         </button>
       </header>

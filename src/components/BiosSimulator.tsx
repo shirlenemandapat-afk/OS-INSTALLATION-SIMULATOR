@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { OSType, BiosConfig, TaskRequirement } from '../types';
 import { HelpRubricModal } from './HelpRubricModal';
-import { Cpu, HardDrive, Shield, Check, Save, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertTriangle, Key, ShieldCheck, Check, Save } from 'lucide-react';
 
 interface BiosSimulatorProps {
   os: OSType;
@@ -16,352 +16,365 @@ export const BiosSimulator: React.FC<BiosSimulatorProps> = ({
   biosConfig,
   onSaveBios
 }) => {
-  const [activeTab, setActiveTab] = useState<'main' | 'advanced' | 'boot' | 'security' | 'exit'>('boot');
+  const tabs = ['main', 'advanced', 'security', 'boot', 'exit'] as const;
+  type TabType = typeof tabs[number];
+
+  const [activeTab, setActiveTab] = useState<TabType>('boot');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [config, setConfig] = useState<BiosConfig>({ ...biosConfig });
   const [showConfirmExit, setShowConfirmExit] = useState(false);
+  const [showMouseToast, setShowMouseToast] = useState(false);
 
-  // Helper to move boot item up/down
-  const moveBootItem = (index: number, direction: 'up' | 'down') => {
-    const newOrder = [...config.bootOrder];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-    const temp = newOrder[index];
-    newOrder[index] = newOrder[targetIndex];
-    newOrder[targetIndex] = temp;
-    setConfig({ ...config, bootOrder: newOrder });
-  };
-
-  const handleSaveAndExit = () => {
-    onSaveBios({
-      ...config,
-      savedAndExited: true
-    });
-  };
-
-  // Aesthetics based on selected OS era
-  const getBiosTheme = () => {
-    switch (os) {
-      case 'win7':
-        return {
-          containerClass: 'bg-blue-900 text-yellow-300 font-mono text-sm border-4 border-slate-300',
-          headerBg: 'bg-slate-300 text-blue-950 font-bold px-4 py-1.5 flex justify-between items-center',
-          tabActive: 'bg-yellow-400 text-blue-950 font-bold px-3 py-1',
-          tabInactive: 'text-white hover:text-yellow-200 px-3 py-1',
-          panelBg: 'bg-blue-950 border-2 border-slate-400 p-4 min-h-[420px]',
-          accentText: 'text-white font-bold',
-          title: 'Phoenix - AwardBIOS CMOS Setup Utility (Legacy v6.00PG)'
-        };
-      case 'win10':
-        return {
-          containerClass: 'bg-slate-950 text-slate-100 font-sans text-sm border border-slate-800',
-          headerBg: 'bg-slate-900 border-b border-slate-800 text-sky-400 font-bold px-6 py-3 flex justify-between items-center',
-          tabActive: 'bg-sky-600 text-white font-bold px-4 py-2 rounded-t-lg',
-          tabInactive: 'text-slate-400 hover:text-slate-200 px-4 py-2',
-          panelBg: 'bg-slate-900/90 border border-slate-800 rounded-b-xl p-6 min-h-[420px]',
-          accentText: 'text-sky-300 font-semibold',
-          title: 'Aptio Setup Utility - American Megatrends (UEFI Mode)'
-        };
-      case 'win11':
-        return {
-          containerClass: 'bg-slate-950 text-slate-100 font-sans text-sm border border-indigo-900/50',
-          headerBg: 'bg-gradient-to-r from-indigo-950 via-slate-950 to-blue-950 border-b border-indigo-800/40 px-6 py-3 flex justify-between items-center',
-          tabActive: 'bg-indigo-600 text-white font-bold px-4 py-2 rounded-t-xl shadow-lg shadow-indigo-600/20',
-          tabInactive: 'text-slate-400 hover:text-slate-200 px-4 py-2',
-          panelBg: 'bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-b-2xl p-6 min-h-[420px]',
-          accentText: 'text-indigo-300 font-semibold',
-          title: 'ROG / ASUS UEFI BIOS Utility - Advanced Mode (TPM 2.0 Ready)'
-        };
+  // Define menu items for each tab
+  const getTabItems = useCallback((tab: TabType) => {
+    switch (tab) {
+      case 'main':
+        return [
+          { id: 'time', label: 'System Time:', value: '[10:24:30]' },
+          { id: 'date', label: 'System Date:', value: '[08/12/2026]' },
+          { id: 'drive', label: 'Primary Master:', value: `Virtual SATA SSD (${task.diskSizeGB} GB)` },
+          { id: 'mem', label: 'System Memory:', value: '640 KB' },
+          { id: 'extmem', label: 'Extended Memory:', value: '16383 MB' }
+        ];
+      case 'advanced':
+        return [
+          { id: 'sata', label: 'SATA Controller Mode', value: `[${config.sataMode.toUpperCase()}]` },
+          { id: 'cpu', label: 'Processor Type', value: 'Intel Core i7-11700K' },
+          { id: 'vt', label: 'Virtualization Technology', value: '[Enabled]' }
+        ];
+      case 'security':
+        return [
+          { id: 'secureboot', label: 'Secure Boot Control', value: `[${config.secureBoot ? 'Enabled' : 'Disabled'}]` },
+          { id: 'tpm', label: 'TPM 2.0 / Intel PTT State', value: `[${config.tpmEnabled ? 'Enabled' : 'Disabled'}]` },
+          { id: 'pass', label: 'Supervisor Password', value: 'Clear' }
+        ];
+      case 'boot':
+        return config.bootOrder.map((device, idx) => {
+          const devName = device === 'usb'
+            ? 'Removable Devices (USB Flash Drive)'
+            : device === 'hdd'
+            ? 'Hard Drive (Drive 0)'
+            : 'CD-ROM Drive';
+          return {
+            id: `boot_${device}`,
+            label: `${idx + 1}. ${devName}`,
+            value: idx === 0 ? '[1st Boot Device]' : ''
+          };
+        }).concat([
+          { id: 'bootmode', label: 'Boot Mode Priority', value: `[${config.bootMode.toUpperCase()}]` }
+        ]);
+      case 'exit':
+        return [
+          { id: 'save_exit', label: 'Save Changes and Exit', value: '(Press F10 or Enter)' },
+          { id: 'discard_exit', label: 'Discard Changes and Exit', value: '' },
+          { id: 'defaults', label: 'Get Default Values', value: '(Press F9)' }
+        ];
     }
+  }, [config, task.diskSizeGB]);
+
+  const currentItems = getTabItems(activeTab);
+
+  const triggerMouseWarning = () => {
+    setShowMouseToast(true);
+    setTimeout(() => setShowMouseToast(false), 3000);
   };
 
-  const theme = getBiosTheme();
+  // Helper to reorder boot device
+  const moveBootDevice = useCallback((dir: 'up' | 'down') => {
+    if (activeTab !== 'boot') return;
+    if (selectedIndex >= config.bootOrder.length) return; // on bootMode
+
+    const newOrder = [...config.bootOrder];
+    const targetIdx = dir === 'up' ? selectedIndex - 1 : selectedIndex + 1;
+    if (targetIdx < 0 || targetIdx >= newOrder.length) return;
+
+    const temp = newOrder[selectedIndex];
+    newOrder[selectedIndex] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+
+    setConfig(prev => ({ ...prev, bootOrder: newOrder }));
+    setSelectedIndex(targetIdx);
+  }, [activeTab, selectedIndex, config.bootOrder]);
+
+  // Toggle item value
+  const toggleCurrentValue = useCallback(() => {
+    const items = getTabItems(activeTab);
+    const item = items[selectedIndex];
+    if (!item) return;
+
+    if (item.id === 'sata') {
+      setConfig(prev => ({ ...prev, sataMode: prev.sataMode === 'ahci' ? 'ide' : 'ahci' }));
+    } else if (item.id === 'secureboot') {
+      setConfig(prev => ({ ...prev, secureBoot: !prev.secureBoot }));
+    } else if (item.id === 'tpm') {
+      setConfig(prev => ({ ...prev, tpmEnabled: !prev.tpmEnabled }));
+    } else if (item.id === 'bootmode') {
+      setConfig(prev => ({ ...prev, bootMode: prev.bootMode === 'legacy' ? 'uefi' : 'legacy' }));
+    } else if (item.id === 'save_exit') {
+      setShowConfirmExit(true);
+    } else if (item.id === 'defaults') {
+      setConfig({
+        bootOrder: ['hdd', 'cdrom', 'usb'],
+        bootMode: 'legacy',
+        sataMode: 'ide',
+        secureBoot: false,
+        tpmEnabled: false,
+        savedAndExited: false
+      });
+    }
+  }, [activeTab, selectedIndex, getTabItems]);
+
+  // Global Keyboard Navigation Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent browser scroll or shortcut interference
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'F1', 'F9', 'F10'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      if (showConfirmExit) {
+        if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y') {
+          onSaveBios({ ...config, savedAndExited: true });
+        } else if (e.key === 'Escape' || e.key === 'n' || e.key === 'N') {
+          setShowConfirmExit(false);
+        }
+        return;
+      }
+
+      // Tab switching: ArrowLeft / ArrowRight
+      if (e.key === 'ArrowLeft') {
+        const currentTabIdx = tabs.indexOf(activeTab);
+        const prevTabIdx = (currentTabIdx - 1 + tabs.length) % tabs.length;
+        setActiveTab(tabs[prevTabIdx]);
+        setSelectedIndex(0);
+      } else if (e.key === 'ArrowRight') {
+        const currentTabIdx = tabs.indexOf(activeTab);
+        const nextTabIdx = (currentTabIdx + 1) % tabs.length;
+        setActiveTab(tabs[nextTabIdx]);
+        setSelectedIndex(0);
+      }
+
+      // Vertical item selection: ArrowUp / ArrowDown
+      else if (e.key === 'ArrowDown') {
+        const items = getTabItems(activeTab);
+        setSelectedIndex(prev => (prev >= items.length - 1 ? 0 : prev + 1));
+      } else if (e.key === 'ArrowUp') {
+        const items = getTabItems(activeTab);
+        setSelectedIndex(prev => (prev <= 0 ? items.length - 1 : prev - 1));
+      }
+
+      // Value modification or boot ordering: + / - / Enter / Space
+      else if (e.key === '+' || e.key === '=' || e.key === 'PageUp') {
+        if (activeTab === 'boot' && selectedIndex < config.bootOrder.length) {
+          moveBootDevice('up');
+        } else {
+          toggleCurrentValue();
+        }
+      } else if (e.key === '-' || e.key === '_' || e.key === 'PageDown') {
+        if (activeTab === 'boot' && selectedIndex < config.bootOrder.length) {
+          moveBootDevice('down');
+        } else {
+          toggleCurrentValue();
+        }
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        toggleCurrentValue();
+      }
+
+      // Function Keys
+      else if (e.key === 'F10') {
+        setShowConfirmExit(true);
+      } else if (e.key === 'F9') {
+        setConfig({
+          bootOrder: ['hdd', 'cdrom', 'usb'],
+          bootMode: 'legacy',
+          sataMode: 'ide',
+          secureBoot: false,
+          tpmEnabled: false,
+          savedAndExited: false
+        });
+      } else if (e.key === 'Escape') {
+        if (activeTab !== 'exit') {
+          setActiveTab('exit');
+          setSelectedIndex(0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, selectedIndex, config, showConfirmExit, getTabItems, moveBootDevice, toggleCurrentValue, onSaveBios]);
 
   return (
-    <div className="fixed inset-0 bg-slate-950 flex flex-col justify-between p-4 md:p-8 select-none z-50">
+    <div 
+      onClick={triggerMouseWarning}
+      className="fixed inset-0 bg-slate-950 flex flex-col justify-between p-2 sm:p-6 select-none z-50 font-mono"
+    >
       <HelpRubricModal task={task} selectedOS={os} />
 
-      <div className={`max-w-5xl mx-auto w-full shadow-2xl rounded-xl overflow-hidden ${theme.containerClass} flex flex-col flex-1`}>
-        {/* BIOS Header Bar */}
-        <div className={theme.headerBg}>
-          <span className="truncate">{theme.title}</span>
-          <span className="text-xs opacity-90 hidden sm:inline">System Time: {new Date().toLocaleTimeString()}</span>
+      {/* Keyboard Only Floating Toast Warning */}
+      {showMouseToast && (
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-2xl text-xs border-2 border-amber-500 animate-bounce flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-slate-950 shrink-0" />
+          <span>⚠️ KEYBOARD ONLY IN BIOS! Use ← → Arrow Keys for Tabs, ↑ ↓ for Items, -/+ or Enter to Change, F10 Save & Exit.</span>
+        </div>
+      )}
+
+      {/* Main PhoenixBIOS Window Canvas (Pixel accurate match to image!) */}
+      <div className="max-w-4xl mx-auto w-full border-4 border-[#00a8a8] shadow-2xl flex flex-col flex-1 my-auto overflow-hidden text-xs">
+        
+        {/* Top Header Bar: Cyan with PhoenixBIOS Title */}
+        <div className="bg-[#00a8a8] text-black font-bold text-center py-1 text-sm tracking-wider uppercase border-b-2 border-black flex justify-between px-4 items-center">
+          <span className="w-24 hidden sm:inline text-[10px] text-slate-900 font-semibold">Phoenix Tech</span>
+          <span className="flex-1 text-center font-bold">PhoenixBIOS Setup Utility</span>
+          <span className="w-24 text-right text-[10px] text-slate-900 font-semibold hidden sm:inline">v6.00PG</span>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-slate-900/90 px-4 pt-2 border-b border-slate-800 flex items-center gap-1 overflow-x-auto">
-          {(['main', 'advanced', 'boot', 'security', 'exit'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? theme.tabActive : theme.tabInactive}
-            >
-              {tab.toUpperCase()}
-            </button>
-          ))}
+        {/* Menu Tabs Bar: Dark Blue Background */}
+        <div className="bg-[#0000aa] px-4 py-1 flex items-center justify-start gap-4 text-sm font-bold border-b-2 border-black">
+          {tabs.map((tab) => {
+            const isSelected = activeTab === tab;
+            return (
+              <div
+                key={tab}
+                className={`px-3 py-0.5 capitalize transition-all ${
+                  isSelected
+                    ? 'bg-[#bfbfbf] text-[#0000aa] font-black shadow'
+                    : 'text-white'
+                }`}
+              >
+                {tab === 'main' ? 'Main' : tab === 'advanced' ? 'Advanced' : tab === 'security' ? 'Security' : tab === 'boot' ? 'Boot' : 'Exit'}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Tab Content Body */}
-        <div className={`flex-1 ${theme.panelBg} flex flex-col justify-between gap-6`}>
-          {activeTab === 'main' && (
-            <div className="space-y-4">
-              <h3 className={`text-base border-b border-slate-700 pb-2 ${theme.accentText}`}>System Information Summary</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs space-y-1">
-                <div>BIOS Version: <strong className="text-white">v3.2.1-LabBuild</strong></div>
-                <div>Processor: <strong className="text-white">Intel Core i7-11700K @ 3.60GHz</strong></div>
-                <div>Installed Memory: <strong className="text-white">16,384 MB DDR4</strong></div>
-                <div>Storage Drive 0: <strong className="text-white">Virtual SATA SSD ({task.diskSizeGB} GB)</strong></div>
-                <div>Target OS Requested: <strong className="text-amber-400 uppercase font-bold">{os}</strong></div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'advanced' && (
-            <div className="space-y-4">
-              <h3 className={`text-base border-b border-slate-700 pb-2 ${theme.accentText}`}>Storage Controller & SATA Configuration</h3>
-              <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 space-y-4 text-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">SATA Controller Mode:</span>
-                    <span className="text-[11px] text-slate-400">Select AHCI for modern SSD performance or IDE for legacy compatibility.</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setConfig({ ...config, sataMode: 'ahci' })}
-                      className={`px-3 py-1.5 rounded font-bold border transition-all ${
-                        config.sataMode === 'ahci'
-                          ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}
-                    >
-                      AHCI
-                    </button>
-                    <button
-                      onClick={() => setConfig({ ...config, sataMode: 'ide' })}
-                      className={`px-3 py-1.5 rounded font-bold border transition-all ${
-                        config.sataMode === 'ide'
-                          ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}
-                    >
-                      IDE
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800 text-amber-300 text-[11px]">
-                  Task Requirement: Set SATA Mode to <strong className="uppercase font-bold text-amber-400">{task.biosReq.sataMode}</strong>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'boot' && (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-                <h3 className={`text-base ${theme.accentText}`}>Boot Order Priority & Mode Settings</h3>
-                <span className="text-xs text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
-                  Target: Set USB Flash Drive as 1st Boot Device
-                </span>
-              </div>
-
-              {/* Boot Order List */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300">1. Boot Device Priority List (1st device boots installer):</label>
-                <div className="space-y-2">
-                  {config.bootOrder.map((device, index) => {
-                    const label = device === 'usb' ? 'USB Flash Drive (Bootable Installer)' : device === 'hdd' ? 'Hard Disk Drive (Drive 0)' : 'CD/DVD-ROM Drive';
-                    const isFirst = index === 0;
-                    return (
-                      <div
-                        key={device}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
-                          isFirst
-                            ? 'bg-amber-950/40 border-amber-500 text-amber-200 font-bold'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200">
-                            {index + 1}
-                          </span>
-                          <span>{label}</span>
-                          {isFirst && <span className="text-[10px] bg-amber-500 text-slate-950 font-extrabold px-2 py-0.5 rounded">1ST BOOT DEVICE</span>}
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => moveBootItem(index, 'up')}
-                            disabled={index === 0}
-                            className="p-1 hover:bg-slate-800 rounded disabled:opacity-30 text-slate-300"
-                            title="Move Up"
-                          >
-                            <ArrowUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => moveBootItem(index, 'down')}
-                            disabled={index === config.bootOrder.length - 1}
-                            className="p-1 hover:bg-slate-800 rounded disabled:opacity-30 text-slate-300"
-                            title="Move Down"
-                          >
-                            <ArrowDown className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Boot Mode Selection */}
-              <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">Boot Mode (UEFI vs Legacy CSM):</span>
-                    <span className="text-[11px] text-slate-400">UEFI is required for Windows 11 & modern partition tables (GPT).</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setConfig({ ...config, bootMode: 'uefi' })}
-                      className={`px-3 py-1.5 rounded font-bold border transition-all ${
-                        config.bootMode === 'uefi'
-                          ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}
-                    >
-                      UEFI Mode
-                    </button>
-                    <button
-                      onClick={() => setConfig({ ...config, bootMode: 'legacy' })}
-                      className={`px-3 py-1.5 rounded font-bold border transition-all ${
-                        config.bootMode === 'legacy'
-                          ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}
-                    >
-                      Legacy CSM
-                    </button>
-                  </div>
-                </div>
-                <div className="text-amber-300 text-[11px]">
-                  Task Requirement: Set Boot Mode to <strong className="uppercase font-bold text-amber-400">{task.biosReq.bootMode}</strong>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'security' && (
-            <div className="space-y-4">
-              <h3 className={`text-base border-b border-slate-700 pb-2 ${theme.accentText}`}>Security, Secure Boot & TPM 2.0 / PTT</h3>
-
-              <div className="space-y-3 text-xs">
-                {/* Secure Boot Toggle */}
-                <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">Secure Boot Control:</span>
-                    <span className="text-[11px] text-slate-400">Ensures system boots using only trusted software firmware.</span>
-                  </div>
-                  <button
-                    onClick={() => setConfig({ ...config, secureBoot: !config.secureBoot })}
-                    className={`px-4 py-1.5 rounded-lg font-bold border transition-all ${
-                      config.secureBoot
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-slate-800 text-slate-400 border-slate-700'
-                    }`}
-                  >
-                    {config.secureBoot ? 'ENABLED' : 'DISABLED'}
-                  </button>
-                </div>
-
-                {/* TPM 2.0 Toggle */}
-                <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">TPM 2.0 / Intel PTT Device:</span>
-                    <span className="text-[11px] text-slate-400">Hardware security processor required for Windows 11 installation.</span>
-                  </div>
-                  <button
-                    onClick={() => setConfig({ ...config, tpmEnabled: !config.tpmEnabled })}
-                    className={`px-4 py-1.5 rounded-lg font-bold border transition-all ${
-                      config.tpmEnabled
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-slate-800 text-slate-400 border-slate-700'
-                    }`}
-                  >
-                    {config.tpmEnabled ? 'ENABLED' : 'DISABLED'}
-                  </button>
-                </div>
-
-                <div className="p-3 bg-indigo-950/40 border border-indigo-900/60 rounded-xl text-indigo-300 text-[11px]">
-                  Task Requirement: Secure Boot = <strong className="text-white">{task.biosReq.secureBoot ? 'ENABLED' : 'DISABLED'}</strong> | TPM 2.0 = <strong className="text-white">{task.biosReq.tpmEnabled ? 'ENABLED' : 'DISABLED'}</strong>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'exit' && (
-            <div className="space-y-6 text-xs max-w-lg mx-auto py-6 text-center">
-              <h3 className={`text-lg ${theme.accentText}`}>Exit & Save Configuration Options</h3>
-              <p className="text-slate-300">
-                After configuring Boot Order, SATA Mode, Boot Mode, and Security settings according to your assigned student task, select <strong className="text-amber-300">Save Changes & Reset</strong> to apply settings and boot into the Windows Installer.
-              </p>
-
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => setShowConfirmExit(true)}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm transition-all"
+        {/* Main Center Area: Two Columns over Light Gray Canvas */}
+        <div className="flex-1 bg-[#bfbfbf] text-black flex flex-col md:flex-row border-b-2 border-black overflow-hidden min-h-[380px]">
+          
+          {/* Left Column: Menu Items (~65% width) */}
+          <div className="flex-1 p-4 border-r-2 border-black space-y-1.5 overflow-y-auto">
+            {currentItems.map((item, index) => {
+              const isFocused = index === selectedIndex;
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between px-2 py-1 text-xs font-bold leading-none ${
+                    isFocused
+                      ? 'bg-[#0000aa] text-white shadow'
+                      : 'text-[#0000aa]'
+                  }`}
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes and Reset (F10)</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('boot')}
-                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
-                >
-                  Discard Changes & Return
-                </button>
-              </div>
-            </div>
-          )}
+                  <span>{item.label}</span>
+                  <span className={isFocused ? 'text-amber-300' : 'text-slate-900'}>
+                    {item.value}
+                  </span>
+                </div>
+              );
+            })}
 
-          {/* BIOS Key Legend Footer */}
-          <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-[11px] text-slate-400">
-            <div className="flex items-center gap-4">
-              <span><kbd className="bg-slate-800 text-amber-300 px-1 py-0.5 rounded">F1</kbd> Help</span>
-              <span><kbd className="bg-slate-800 text-amber-300 px-1 py-0.5 rounded">↑↓</kbd> Select Item</span>
-              <span><kbd className="bg-slate-800 text-amber-300 px-1 py-0.5 rounded">F10</kbd> Save & Exit</span>
+            {/* Sub-note hint in Boot tab */}
+            {activeTab === 'boot' && (
+              <div className="pt-6 text-[11px] text-[#0000aa] italic space-y-1 border-t border-slate-500/50 mt-4">
+                <p>Use <strong className="text-black font-bold">&lt;+&gt;</strong> or <strong className="text-black font-bold">&lt;-&gt;</strong> keys to move device up or down in boot priority list.</p>
+                <p className="text-amber-900 font-semibold">1st Boot Device must be set to <span className="underline uppercase font-bold">USB Flash Drive</span> for installation media boot.</p>
+              </div>
+            )}
+
+            {/* Sub-note in Security tab */}
+            {activeTab === 'security' && (
+              <div className="pt-6 text-[11px] text-[#0000aa] italic border-t border-slate-500/50 mt-4">
+                <p>Requirement for Windows 11: Secure Boot = <strong className="text-black uppercase">{task.biosReq.secureBoot ? 'Enabled' : 'Disabled'}</strong> | TPM 2.0 = <strong className="text-black uppercase">{task.biosReq.tpmEnabled ? 'Enabled' : 'Disabled'}</strong></p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Item Specific Help (~35% width matching reference image!) */}
+          <div className="w-full md:w-80 bg-[#bfbfbf] p-3 text-black font-mono text-xs flex flex-col justify-between border-t-2 md:border-t-0 border-black">
+            <div>
+              <div className="border-b border-black pb-1 mb-2 font-bold text-center text-sm uppercase text-[#0000aa]">
+                Item Specific Help
+              </div>
+
+              {activeTab === 'boot' ? (
+                <div className="space-y-2 text-[11px] leading-relaxed text-slate-900">
+                  <p className="font-semibold text-black">Keys used to view or configure devices:</p>
+                  <p><strong className="text-[#0000aa]">&lt;Enter&gt;</strong> expands or collapses devices with a + or -</p>
+                  <p><strong className="text-[#0000aa]">&lt;Ctrl+Enter&gt;</strong> expands all</p>
+                  <p><strong className="text-[#0000aa]">&lt;+&gt;</strong> and <strong className="text-[#0000aa]">&lt;-&gt;</strong> moves the device up or down in priority.</p>
+                  <p><strong className="text-[#0000aa]">&lt;n&gt;</strong> May move removable device between Hard Disk or Removable Disk</p>
+                  <p><strong className="text-[#0000aa]">&lt;d&gt;</strong> Remove a device that is not installed.</p>
+                </div>
+              ) : activeTab === 'advanced' ? (
+                <div className="space-y-2 text-[11px] leading-relaxed text-slate-900">
+                  <p className="font-semibold text-black">Configure SATA Controller:</p>
+                  <p><strong className="text-[#0000aa]">AHCI Mode:</strong> Advanced Host Controller Interface for SSD performance.</p>
+                  <p><strong className="text-[#0000aa]">IDE Mode:</strong> Legacy compatibility mode for older operating systems.</p>
+                  <p className="pt-2 text-[#0000aa] font-bold">Press &lt;+&gt; or &lt;-&gt; or &lt;Enter&gt; to toggle setting.</p>
+                </div>
+              ) : activeTab === 'security' ? (
+                <div className="space-y-2 text-[11px] leading-relaxed text-slate-900">
+                  <p className="font-semibold text-black">Firmware Security Settings:</p>
+                  <p><strong className="text-[#0000aa]">Secure Boot:</strong> Ensures only authorized firmware boots.</p>
+                  <p><strong className="text-[#0000aa]">TPM 2.0 / PTT:</strong> Hardware cryptographic module for Windows 11 compatibility.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-[11px] leading-relaxed text-slate-900">
+                  <p className="font-semibold text-black">BIOS Navigation Help:</p>
+                  <p>Use <strong className="text-[#0000aa]">&lt;← →&gt;</strong> to select Menu screens.</p>
+                  <p>Use <strong className="text-[#0000aa]">&lt;↑ ↓&gt;</strong> to select options within a Menu.</p>
+                  <p>Press <strong className="text-[#0000aa]">&lt;F10&gt;</strong> to save configuration and exit setup.</p>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => setShowConfirmExit(true)}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded shadow transition-all"
-            >
-              F10: Save & Exit
-            </button>
+
+            <div className="p-2 bg-[#a0a0a0] border border-slate-600 rounded text-[10px] text-slate-900 mt-4">
+              Student Task Target: Boot Order = <strong className="text-black uppercase">USB 1st</strong> | SATA = <strong className="text-black uppercase">{task.biosReq.sataMode}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Status Bar: Cyan Background (Matching exact bottom legend in image!) */}
+        <div className="bg-[#00a8a8] text-black font-bold p-2 text-[11px] space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span><strong className="text-[#0000aa]">F1</strong> Help</span>
+            <span><strong className="text-[#0000aa]">↑↓</strong> Select Item</span>
+            <span><strong className="text-[#0000aa]">-/+</strong> Change Values</span>
+            <span><strong className="text-[#0000aa]">F9</strong> Setup Defaults</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-black/30">
+            <span><strong className="text-[#0000aa]">Esc</strong> Exit</span>
+            <span><strong className="text-[#0000aa]">←→</strong> Select Menu</span>
+            <span><strong className="text-[#0000aa]">Enter</strong> Select Sub-Menu</span>
+            <span><strong className="text-[#0000aa]">F10</strong> Save and Exit</span>
           </div>
         </div>
       </div>
 
       {/* Save & Exit Confirmation Modal */}
       {showConfirmExit && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl text-slate-100 space-y-4">
-            <div className="flex items-center gap-3 text-amber-400">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-              <h3 className="font-bold text-base text-slate-100">Save Configuration and Exit?</h3>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 font-mono">
+          <div className="bg-[#bfbfbf] border-4 border-[#0000aa] p-6 max-w-md w-full shadow-2xl text-black space-y-4">
+            <div className="bg-[#0000aa] text-white font-bold p-2 text-center text-sm uppercase">
+              Save configuration changes and exit now?
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Save configured BIOS settings (Boot Order: <strong className="text-amber-300 uppercase">{config.bootOrder[0]} First</strong>, Mode: <strong className="text-blue-300 uppercase">{config.bootMode}</strong>, SATA: <strong className="text-blue-300 uppercase">{config.sataMode}</strong>) and reboot system into installer?
+            <p className="text-xs text-black leading-relaxed font-semibold">
+              Boot Order: <strong className="text-[#0000aa] uppercase">{config.bootOrder[0]} FIRST</strong> | Mode: <strong className="text-[#0000aa] uppercase">{config.bootMode}</strong> | SATA: <strong className="text-[#0000aa] uppercase">{config.sataMode}</strong>
             </p>
+            <div className="p-2 bg-yellow-200 border border-yellow-500 text-[11px] text-yellow-950 font-bold">
+              Press [ENTER] or [Y] to Confirm Save & Reboot. Press [ESC] or [N] to Cancel.
+            </div>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowConfirmExit(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                className="px-4 py-1.5 bg-[#a0a0a0] hover:bg-slate-400 text-black font-bold border border-black text-xs"
               >
-                Cancel
+                [Esc] Cancel
               </button>
               <button
-                onClick={handleSaveAndExit}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg flex items-center gap-1.5"
+                onClick={() => onSaveBios({ ...config, savedAndExited: true })}
+                className="px-4 py-1.5 bg-[#0000aa] hover:bg-blue-800 text-white font-bold border border-black text-xs shadow"
               >
-                <Check className="w-4 h-4" /> Save & Exit Setup
+                [Enter] Save & Reboot
               </button>
             </div>
           </div>

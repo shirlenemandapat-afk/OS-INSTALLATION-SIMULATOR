@@ -55,7 +55,7 @@ export interface PartitionItem {
 }
 
 export interface SimulationState {
-  step: 'portal' | 'desktop' | 'rebooting' | 'bios' | 'installer_language' | 'installer_key' | 'installer_edition' | 'installer_type' | 'installer_partition' | 'installer_copying' | 'oobe' | 'complete_desktop' | 'evaluation';
+  step: 'portal' | 'desktop' | 'rebooting' | 'powered_off' | 'bios' | 'installer_language' | 'installer_welcome' | 'installer_key' | 'installer_edition' | 'installer_type' | 'installer_partition' | 'installer_copying' | 'oobe' | 'complete_desktop' | 'evaluation';
   student: StudentInfo;
   selectedOS: OSType;
   assignedTask: TaskRequirement;
