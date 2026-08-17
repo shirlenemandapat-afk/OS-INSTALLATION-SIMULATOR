@@ -39,13 +39,42 @@ export const WindowsInstaller: React.FC<WindowsInstallerProps> = ({
   const timeOptions = ['English (United States)', 'English (Philippines)', 'English (United Kingdom)', 'Spanish (Mexico)'];
   const keyOptions = ['US Keyboard', 'UK Keyboard', 'Dvorak Keyboard', 'Spanish Keyboard'];
 
+  // Selected OS Edition (for Windows 10 edition picker)
+  const [selectedEdition, setSelectedEdition] = useState<'pro' | 'home' | 'education' | 'enterprise'>('pro');
+  const [showEditionPicker, setShowEditionPicker] = useState(false);
+  const [restartCountdown, setRestartCountdown] = useState<number | null>(null);
+
+  const win10Editions = [
+    { id: 'home', name: 'Windows 10 Home', arch: 'x64', date: '6/5/2021' },
+    { id: 'home_n', name: 'Windows 10 Home N', arch: 'x64', date: '6/5/2021' },
+    { id: 'pro', name: 'Windows 10 Pro', arch: 'x64', date: '6/5/2021' },
+    { id: 'pro_n', name: 'Windows 10 Pro N', arch: 'x64', date: '6/5/2021' },
+    { id: 'pro_ws', name: 'Windows 10 Pro for Workstations', arch: 'x64', date: '6/5/2021' },
+    { id: 'education', name: 'Windows 10 Education', arch: 'x64', date: '6/5/2021' },
+    { id: 'enterprise', name: 'Windows 10 Enterprise', arch: 'x64', date: '6/5/2021' },
+  ];
+
   const handleNextStep = () => {
     if (state.step === 'installer_language') {
       onUpdateState({ step: 'installer_welcome' });
+    } else if (state.step === 'installer_welcome') {
+      if (os === 'win7') {
+        // In Windows 7, "Install now" leads directly to License terms
+        onUpdateState({ step: 'installer_edition' });
+      } else {
+        onUpdateState({ step: 'installer_key' });
+      }
     } else if (state.step === 'installer_key') {
-      onUpdateState({ step: 'installer_edition' });
+      if (os === 'win10') {
+        setShowEditionPicker(true);
+        onUpdateState({ step: 'installer_edition' });
+      } else {
+        onUpdateState({ step: 'installer_edition' });
+      }
     } else if (state.step === 'installer_edition') {
-      if (agreedToEula) {
+      if (showEditionPicker) {
+        setShowEditionPicker(false);
+      } else if (agreedToEula) {
         onUpdateState({ step: 'installer_type' });
       }
     } else if (state.step === 'installer_type') {
@@ -57,8 +86,13 @@ export const WindowsInstaller: React.FC<WindowsInstallerProps> = ({
     setIsStartingSetup(true);
     setTimeout(() => {
       setIsStartingSetup(false);
-      onUpdateState({ step: 'installer_key' });
-    }, 1500);
+      if (os === 'win7') {
+        // Windows 7 clean install skips product key upfront and goes to License Terms
+        onUpdateState({ step: 'installer_edition' });
+      } else {
+        onUpdateState({ step: 'installer_key' });
+      }
+    }, 1400);
   };
 
   // Progress animation for installer copying step
@@ -296,15 +330,26 @@ export const WindowsInstaller: React.FC<WindowsInstallerProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between border-t border-slate-400/30 pt-4 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => alert("System Recovery Options / Command Prompt available after installation in Desktop CMD.")}
-                      className="text-sky-400 underline hover:text-sky-300 text-xs cursor-pointer"
-                    >
-                      Repair your computer
-                    </button>
+                    <div className="flex items-center gap-4">
+                      {os === 'win7' && (
+                        <button
+                          type="button"
+                          onClick={() => alert("What to know before installing Windows:\n\n• Ensure minimum 1 GHz processor, 1 GB RAM (32-bit) / 2 GB RAM (64-bit), and 16 GB disk space.\n• Ensure SATA AHCI mode is enabled in BIOS.\n• Clean installation requires formatting disk partitions.\n• University KMS activation requires network/VPN connection post-install.")}
+                          className="text-sky-600 dark:text-sky-400 underline hover:text-sky-500 text-xs cursor-pointer"
+                        >
+                          What to know before installing Windows
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => alert("System Recovery Options:\n\n• Startup Repair\n• System Restore\n• System Image Recovery\n• Windows Memory Diagnostic\n• Command Prompt (CMD)\n\n(Available anytime in Desktop Command Prompt simulator).")}
+                        className="text-sky-600 dark:text-sky-400 underline hover:text-sky-500 text-xs cursor-pointer"
+                      >
+                        Repair your computer
+                      </button>
+                    </div>
 
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-400 font-mono">
                       {os === 'win7' ? 'Windows 7 Setup' : 'Windows 10 Setup'}
                     </span>
                   </div>
@@ -355,44 +400,96 @@ export const WindowsInstaller: React.FC<WindowsInstallerProps> = ({
           {/* STEP 3: Select Edition & License Terms */}
           {state.step === 'installer_edition' && (
             <div className="space-y-6 flex-1 flex flex-col justify-between">
-              <div className="space-y-4">
-                <h2 className="text-base font-bold">Applicable notices and license terms</h2>
-                <div className="border rounded p-3 text-xs max-h-36 overflow-y-auto bg-slate-950 text-slate-300 leading-relaxed border-slate-700">
-                  <p className="font-bold text-white mb-1">MICROSOFT SOFTWARE LICENSE TERMS</p>
-                  <p>MICROSOFT WINDOWS {os.toUpperCase()} OPERATING SYSTEM</p>
-                  <p className="mt-2">
-                    These license terms are an agreement between Microsoft Corporation and you. Please read them carefully. By installing, copying, or otherwise using the software, you accept these terms.
-                  </p>
-                </div>
+              {showEditionPicker && os === 'win10' ? (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white">Select the operating system you want to install</h2>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Choose the edition of Windows 10 that matches your license or school assignment.
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2 pt-2 text-xs p-2">
-                  <input
-                    type="checkbox"
-                    id="eula"
-                    checked={agreedToEula}
-                    onChange={(e) => setAgreedToEula(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                  />
-                  <label htmlFor="eula" className="text-slate-200 cursor-pointer font-medium">
-                    I <span className="underline font-bold">a</span>ccept the license terms
-                  </label>
-                </div>
-              </div>
+                  <div className="border border-indigo-900/80 rounded-md overflow-hidden bg-[#180646]">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-[#2b0b6b] border-b border-indigo-900 text-slate-300 font-semibold">
+                          <th className="py-2 px-3">Operating System</th>
+                          <th className="py-2 px-3">Architecture</th>
+                          <th className="py-2 px-3">Date modified</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-indigo-950/60">
+                        {win10Editions.map((ed) => (
+                          <tr
+                            key={ed.id}
+                            onClick={() => setSelectedEdition(ed.id as any)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedEdition === ed.id
+                                ? 'bg-sky-600 text-white font-semibold'
+                                : 'hover:bg-indigo-900/40 text-slate-200'
+                            }`}
+                          >
+                            <td className="py-2 px-3">{ed.name}</td>
+                            <td className="py-2 px-3">{ed.arch}</td>
+                            <td className="py-2 px-3 font-mono text-[11px]">{ed.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="flex justify-end border-t border-slate-400/30 pt-4 text-xs">
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!agreedToEula}
-                  className={`px-6 py-1.5 font-bold text-xs rounded transition-all cursor-pointer ${
-                    agreedToEula
-                      ? 'bg-slate-200 text-slate-950 hover:bg-white shadow'
-                      : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  <span className="underline">N</span>ext &rarr;
-                </button>
-              </div>
+                  <div className="flex justify-end border-t border-slate-400/30 pt-4 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setShowEditionPicker(false)}
+                      className="px-6 py-1.5 font-bold text-xs rounded bg-slate-200 text-slate-950 hover:bg-white shadow cursor-pointer transition-all"
+                    >
+                      <span className="underline">N</span>ext &rarr;
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <h2 className="text-base font-bold">Applicable notices and license terms</h2>
+                    <div className="border rounded p-3 text-xs max-h-36 overflow-y-auto bg-slate-950 text-slate-300 leading-relaxed border-slate-700">
+                      <p className="font-bold text-white mb-1">MICROSOFT SOFTWARE LICENSE TERMS</p>
+                      <p>MICROSOFT WINDOWS {os.toUpperCase()} OPERATING SYSTEM</p>
+                      <p className="mt-2">
+                        These license terms are an agreement between Microsoft Corporation and you. Please read them carefully. By installing, copying, or otherwise using the software, you accept these terms.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 text-xs p-2">
+                      <input
+                        type="checkbox"
+                        id="eula"
+                        checked={agreedToEula}
+                        onChange={(e) => setAgreedToEula(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                      />
+                      <label htmlFor="eula" className="text-slate-200 cursor-pointer font-medium">
+                        I <span className="underline font-bold">a</span>ccept the license terms
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end border-t border-slate-400/30 pt-4 text-xs">
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      disabled={!agreedToEula}
+                      className={`px-6 py-1.5 font-bold text-xs rounded transition-all cursor-pointer ${
+                        agreedToEula
+                          ? 'bg-slate-200 text-slate-950 hover:bg-white shadow'
+                          : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      <span className="underline">N</span>ext &rarr;
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -467,20 +564,33 @@ export const WindowsInstaller: React.FC<WindowsInstallerProps> = ({
                   <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Copying Windows files</span>
                   <span>100%</span>
                 </div>
-                <div className={`flex items-center justify-between font-semibold ${copyProgress >= 20 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                <div className={`flex items-center justify-between font-semibold ${copyProgress >= 15 ? 'text-emerald-400' : 'text-slate-400'}`}>
                   <span className="flex items-center gap-2">
-                    {copyProgress >= 20 ? <CheckCircle2 className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
-                    Getting files ready for installation
+                    {copyProgress >= 15 ? <CheckCircle2 className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
+                    {os === 'win7' ? 'Expanding Windows files' : 'Getting files ready for installation'}
                   </span>
                   <span>{copyProgress}%</span>
                 </div>
                 <div className={`flex items-center justify-between ${copyProgress >= 80 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
-                  <span>Installing features</span>
+                  <span className="flex items-center gap-2">
+                    {copyProgress >= 80 ? <CheckCircle2 className="w-4 h-4" /> : null}
+                    Installing features
+                  </span>
                   <span>{copyProgress >= 80 ? 'Done' : 'Pending'}</span>
                 </div>
                 <div className={`flex items-center justify-between ${copyProgress >= 95 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
-                  <span>Installing updates</span>
+                  <span className="flex items-center gap-2">
+                    {copyProgress >= 95 ? <CheckCircle2 className="w-4 h-4" /> : null}
+                    Installing updates
+                  </span>
                   <span>{copyProgress >= 95 ? 'Done' : 'Pending'}</span>
+                </div>
+                <div className={`flex items-center justify-between ${copyProgress >= 100 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
+                  <span className="flex items-center gap-2">
+                    {copyProgress >= 100 ? <CheckCircle2 className="w-4 h-4" /> : null}
+                    Completing installation
+                  </span>
+                  <span>{copyProgress >= 100 ? 'Done' : 'Pending'}</span>
                 </div>
               </div>
 
