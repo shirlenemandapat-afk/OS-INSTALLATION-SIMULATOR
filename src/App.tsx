@@ -178,6 +178,12 @@ export default function App() {
           onRestartComputer={handleRestartComputer}
           onShutdownComputer={handleShutdownComputer}
           onBackToPortal={() => setState((prev) => ({ ...prev, step: 'portal' }))}
+          onViewFullEvaluation={() => {
+            if (!evaluationData) {
+              setEvaluationData(evaluateStudentConfig(state));
+            }
+            setState((prev) => ({ ...prev, step: 'evaluation' }));
+          }}
         />
       )}
 
@@ -232,10 +238,11 @@ export default function App() {
       )}
 
       {/* 7. Evaluation & Feedback Dashboard */}
-      {state.step === 'evaluation' && evaluationData && (
+      {state.step === 'evaluation' && (
         <EvaluationDashboard
-          result={evaluationData}
+          result={evaluationData || evaluateStudentConfig(state)}
           onRestartTask={() => setState((prev) => ({ ...prev, step: 'portal' }))}
+          onBackToDesktop={() => setState((prev) => ({ ...prev, step: 'complete_desktop' }))}
           onOpenInstructorLogs={() => setShowInstructorLogs(true)}
         />
       )}

@@ -17,6 +17,7 @@ interface DesktopSimulatorProps {
   onRestartComputer: () => void;
   onShutdownComputer: () => void;
   onBackToPortal: () => void;
+  onViewFullEvaluation?: () => void;
 }
 
 export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
@@ -26,7 +27,8 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
   simulationState,
   onRestartComputer,
   onShutdownComputer,
-  onBackToPortal
+  onBackToPortal,
+  onViewFullEvaluation
 }) => {
   const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [activeWindow, setActiveWindow] = useState<'none' | 'this_pc' | 'cmd' | 'sysinfo' | 'rubric' | 'kms' | 'settings'>('none');
@@ -601,8 +603,8 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
         )}
 
         {/* WINDOW 4: RUBRIC GRADE REPORT */}
-        {activeWindow === 'rubric' && evaluationResult && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden">
+        {activeWindow === 'rubric' && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold">
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-amber-400" />
@@ -613,40 +615,96 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[480px] overflow-y-auto text-xs">
-              <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
-                <div>
-                  <h3 className="text-lg font-extrabold text-white">{student.name || 'Anonymous Student'}</h3>
-                  <p className="text-slate-400 text-xs">{student.section || 'Lab Section'}</p>
+            {evaluationResult ? (
+              <div className="p-6 space-y-6 max-h-[480px] overflow-y-auto text-xs">
+                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-white">{student.name || 'Anonymous Student'}</h3>
+                    <p className="text-slate-400 text-xs">Section: {student.section || 'Lab Section'} • Task: {task.title}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-2xl font-black ${evaluationResult.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {evaluationResult.percentage}%
+                    </span>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Grade: {evaluationResult.grade}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-2xl font-black text-amber-400">{evaluationResult.percentage}%</span>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Grade: {evaluationResult.grade}</p>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-200">Rubric Breakdown:</h4>
-                {evaluationResult.items.map((item) => (
-                  <div key={item.key} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        {item.passed ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        ) : (
-                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                        )}
-                        <span className="font-semibold text-slate-200">{item.title}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 pl-5">{item.details}</p>
-                    </div>
-                    <span className="font-bold text-amber-400 shrink-0 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                      {item.earned}/{item.max} pts
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-200">Rubric Criteria Breakdown:</h4>
+                    <span className="text-slate-400 text-[11px]">
+                      Earned: <strong className="text-amber-400">{evaluationResult.totalEarned}</strong> / {evaluationResult.totalMax} pts
                     </span>
                   </div>
-                ))}
+
+                  {evaluationResult.scoreDetails && evaluationResult.scoreDetails.length > 0 ? (
+                    evaluationResult.scoreDetails.map((detail, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-xl border flex items-start justify-between gap-3 ${
+                          detail.passed ? 'bg-slate-950 border-slate-800' : 'bg-rose-950/30 border-rose-800/60'
+                        }`}
+                      >
+                        <div className="space-y-0.5 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            {detail.passed ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                            )}
+                            <span className="font-semibold text-slate-200">{detail.item}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 pl-5">{detail.feedback}</p>
+                          <span className="text-[10px] text-slate-500 pl-5 block">Category: {detail.category}</span>
+                        </div>
+                        <span
+                          className={`font-bold shrink-0 px-2 py-0.5 rounded border text-[11px] ${
+                            detail.passed
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}
+                        >
+                          {detail.earned}/{detail.max} pts
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-500 text-center py-4">No detailed score breakdown recorded.</p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => exportToCSV(evaluationResult)}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download CSV Report</span>
+                  </button>
+
+                  {onViewFullEvaluation && (
+                    <button
+                      type="button"
+                      onClick={onViewFullEvaluation}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Full Assessment Report</span>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-8 text-center space-y-3">
+                <Award className="w-12 h-12 text-slate-600 mx-auto" />
+                <p className="text-sm font-semibold text-slate-300">Assessment in Progress</p>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Your configuration will be automatically graded and rated once you finish the OS installation and setup wizard.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

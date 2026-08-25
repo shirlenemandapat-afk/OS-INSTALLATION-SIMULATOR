@@ -2,18 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { EvaluationResult } from '../types';
 import { exportToCSV } from '../data/tasks';
 import { saveStudentScoreToSupabase, SQL_SETUP_SCRIPT } from '../lib/supabase';
-import { Award, Download, CheckCircle2, AlertTriangle, RotateCcw, User, FileText, Clock, Users, Database, Copy, Check, Lock } from 'lucide-react';
+import { Award, Download, CheckCircle2, AlertTriangle, RotateCcw, User, FileText, Clock, Users, Database, Copy, Check, Lock, Monitor } from 'lucide-react';
 
 interface EvaluationDashboardProps {
   result: EvaluationResult;
   onRestartTask: () => void;
   onOpenInstructorLogs: () => void;
+  onBackToDesktop?: () => void;
 }
 
 export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
   result,
   onRestartTask,
-  onOpenInstructorLogs
+  onOpenInstructorLogs,
+  onBackToDesktop
 }) => {
   const [dbStatus, setDbStatus] = useState<'saving' | 'saved' | 'error'>('saving');
   const [dbErrorMsg, setDbErrorMsg] = useState<string>('');
@@ -234,9 +236,19 @@ export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
         </span>
 
         <div className="flex items-center gap-3">
+          {onBackToDesktop && (
+            <button
+              onClick={onBackToDesktop}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 shadow flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Monitor className="w-4 h-4 text-sky-400" />
+              <span>Return to OS Desktop</span>
+            </button>
+          )}
+
           <button
             onClick={onRestartTask}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 transition-all"
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 transition-all cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Try Another Task / Re-take</span>
