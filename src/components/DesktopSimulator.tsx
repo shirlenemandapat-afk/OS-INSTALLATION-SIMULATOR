@@ -311,18 +311,18 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 1: THIS PC (FILE EXPLORER) */}
         {activeWindow === 'this_pc' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold">
-              <div className="flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-sky-400" />
-                <span>This PC - Drive Volume Manager</span>
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                <Monitor className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="truncate">This PC - Drive Volume Manager</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
               <h3 className="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2">Devices and Drives</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -359,28 +359,118 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 2: COMMAND PROMPT */}
         {activeWindow === 'cmd' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-black border border-slate-800 rounded-xl shadow-2xl text-emerald-400 z-30 font-mono text-xs overflow-hidden">
-            <div className="bg-slate-900 px-4 py-2 flex items-center justify-between border-b border-slate-800 text-slate-300 font-sans font-bold">
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-2xl bg-black border border-slate-800 rounded-xl shadow-2xl text-emerald-400 z-30 font-mono text-xs overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="bg-slate-900 px-3 sm:px-4 py-2 flex items-center justify-between border-b border-slate-800 text-slate-300 font-sans font-bold shrink-0">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-emerald-400" />
-                <span>Command Prompt - Administrator</span>
+                <span className="truncate">Command Prompt - Administrator</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 h-64 overflow-y-auto space-y-1">
+            {/* Quick Touch Commands Helper Bar for Cellphone / Touchscreen Users */}
+            <div className="bg-slate-950 px-3 py-1.5 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] font-sans shrink-0">
+              <span className="text-slate-400 text-[10px] uppercase font-bold shrink-0">📱 Quick Tap:</span>
+              {[
+                { label: 'diskpart', cmd: 'diskpart' },
+                { label: 'slmgr /ato', cmd: 'slmgr.vbs /ato' },
+                { label: 'slmgr /dli', cmd: 'slmgr.vbs /dli' },
+                { label: 'systeminfo', cmd: 'systeminfo' },
+                { label: 'ipconfig', cmd: 'ipconfig' },
+                { label: 'help', cmd: 'help' },
+                { label: 'cls', cmd: 'cls' }
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    setCmdInput(item.cmd);
+                    // trigger command immediately
+                    const cmd = item.cmd.trim().toLowerCase();
+                    const newLogs = [...cmdLogs, `C:\\Users\\${student.name || 'Student'}> ${item.cmd}`];
+
+                    if (cmd === 'cls' || cmd === 'clear') {
+                      setCmdLogs([]);
+                      setCmdInput('');
+                      return;
+                    } else if (cmd === 'help') {
+                      newLogs.push('Available commands:');
+                      newLogs.push('  diskpart          - View disk partitions & volume details');
+                      newLogs.push('  systeminfo        - View OS build, BIOS boot mode, and RAM');
+                      newLogs.push('  ver               - Display Windows version');
+                      newLogs.push('  ipconfig          - Display virtual network configuration');
+                      newLogs.push('  slmgr.vbs /ipk <key>   - Install KMS Client Setup Key');
+                      newLogs.push('  slmgr.vbs /skms <host> - Set KMS Server Host (e.g. kms.illinois.edu:1688)');
+                      newLogs.push('  slmgr.vbs /ato         - Activate Windows with KMS server');
+                      newLogs.push('  slmgr.vbs /dli         - Display KMS License Information');
+                      newLogs.push('  slmgr.vbs /dlv         - Display Detailed KMS License Information');
+                      newLogs.push('  cls                    - Clear screen');
+                    } else if (cmd.includes('slmgr.vbs /ato') || cmd.includes('slmgr /ato')) {
+                      setIsKmsActivated(true);
+                      newLogs.push(`Activating Windows(R), ${os === 'win7' ? '7 Professional' : '10 Pro'} edition...`);
+                      newLogs.push(`Product activated successfully via KMS (${kmsHost}).`);
+                    } else if (cmd.includes('slmgr.vbs /dli') || cmd.includes('slmgr /dli')) {
+                      newLogs.push(`Name: Windows(R), ${os === 'win7' ? '7 Professional' : '10 Pro'} edition`);
+                      newLogs.push(`Description: Windows Operating System - VOLUME_KMSCLIENT channel`);
+                      newLogs.push(`Partial Product Key: ${installedProductKey.slice(-5)}`);
+                      newLogs.push(`License Status: ${isKmsActivated ? 'Licensed (Grace period: 180 days)' : 'Notification'}`);
+                      newLogs.push(`Key Management Service client information:`);
+                      newLogs.push(`  Registered KMS machine name: ${kmsHost}`);
+                      newLogs.push(`  KMS host caching: Enabled`);
+                    } else if (cmd === 'diskpart') {
+                      newLogs.push(`Microsoft DiskPart version ${os === 'win7' ? '6.1.7601' : '10.0.19045'} (${os === 'win7' ? 'Windows 7' : 'Windows 10'})`);
+                      newLogs.push('Disk 0 Online: ' + task.diskSizeGB + ' GB');
+                      if (simulationState?.partitions && simulationState.partitions.length > 0) {
+                        simulationState.partitions.forEach((p) => {
+                          newLogs.push(`  Volume ${p.partitionNumber || 0}   ${p.name}   ${(p.sizeMB / 1024).toFixed(1)} GB   ${p.formatted ? 'NTFS' : 'RAW'}`);
+                        });
+                      } else {
+                        newLogs.push('  No partitions defined. Disk is unallocated.');
+                      }
+                    } else if (cmd === 'systeminfo') {
+                      newLogs.push(`Host Name:           WIN-${os.toUpperCase()}-LABPC`);
+                      newLogs.push(`OS Name:             Microsoft Windows ${os === 'win7' ? '7 Professional' : os === 'win10' ? '10 Pro (22H2)' : '11 Pro'}`);
+                      newLogs.push(`OS Version:          ${os === 'win7' ? '6.1.7601 Service Pack 1 Build 7601' : os === 'win10' ? '10.0.19045 N/A Build 19045' : '10.0.22631 Build 22631'}`);
+                      newLogs.push(`Student Name:        ${student.name || 'Anonymous'}`);
+                      newLogs.push(`Section:             ${student.section || 'N/A'}`);
+                      newLogs.push(`System Type:         x64-based PC`);
+                      newLogs.push(`BIOS Boot Mode:      ${simulationState?.biosConfig.bootMode.toUpperCase() || 'UEFI'}`);
+                      newLogs.push(`SATA Controller:     ${simulationState?.biosConfig.sataMode.toUpperCase() || 'AHCI'}`);
+                      newLogs.push(`KMS License Status:  ${isKmsActivated ? 'Activated (kms.illinois.edu)' : 'Pending'}`);
+                      newLogs.push(`Boot Priority USB:   ${simulationState?.biosConfig.bootOrder[0] === 'usb' ? 'OK (1st)' : 'Incorrect'}`);
+                    } else if (cmd === 'ipconfig') {
+                      newLogs.push('Windows IP Configuration');
+                      newLogs.push('');
+                      newLogs.push('Ethernet adapter Ethernet 1:');
+                      newLogs.push('   IPv4 Address. . . . . . . . . . . : 192.168.1.145');
+                      newLogs.push('   Subnet Mask . . . . . . . . . . . : 255.255.255.0');
+                      newLogs.push('   Default Gateway . . . . . . . . . : 192.168.1.1');
+                    }
+                    setCmdLogs(newLogs);
+                    setCmdInput('');
+                  }}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-slate-200 rounded border border-slate-700 shrink-0 cursor-pointer active:scale-95 transition-transform font-mono text-[10px]"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4 h-64 overflow-y-auto space-y-1 flex-1">
               {cmdLogs.map((log, i) => (
-                <div key={i} className="whitespace-pre-wrap">{log}</div>
+                <div key={i} className="whitespace-pre-wrap leading-relaxed">{log}</div>
               ))}
               <form onSubmit={handleCmdSubmit} className="flex items-center gap-2 pt-2">
-                <span>C:\Users\{student.name || 'Student'}&gt;</span>
+                <span className="shrink-0">C:\Users\{student.name || 'Student'}&gt;</span>
                 <input
                   type="text"
                   value={cmdInput}
                   onChange={(e) => setCmdInput(e.target.value)}
                   className="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono"
+                  placeholder="type command..."
                   autoFocus
                 />
               </form>
@@ -390,19 +480,19 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 3: SYSTEM INFORMATION */}
         {activeWindow === 'sysinfo' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden">
-            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-indigo-400" />
-                <span>System Information Summary</span>
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                <Cpu className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span className="truncate">System Information Summary</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
                   <span className="text-slate-400 text-[10px] font-semibold">Student Name</span>
                   <p className="font-bold text-slate-100">{student.name || 'N/A'}</p>
@@ -426,18 +516,18 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 3.5: KMS ACTIVATION MANAGER (ILLINOIS WEBSTORE REFERENCE) */}
         {activeWindow === 'kms' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold">
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-sky-400" />
-                <span>{os === 'win7' ? 'Windows 7' : 'Windows 10'} KMS Activation Tool (Illinois Reference)</span>
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                <Key className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="truncate">{os === 'win7' ? 'Windows 7' : 'Windows 10'} KMS Activation Tool</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
               <div className="p-4 bg-sky-950/40 border border-sky-800/60 rounded-xl flex items-start gap-3">
                 <ShieldCheck className="w-6 h-6 text-sky-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -489,7 +579,7 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                     setIsKmsActivated(true);
                     alert(`KMS Host Verification Complete!\n\nSuccessfully connected to ${kmsHost}.\n${os === 'win7' ? 'Windows 7' : 'Windows 10'} license has been activated.`);
                   }}
-                  className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow text-xs flex items-center gap-2 cursor-pointer transition-all"
+                  className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow text-xs flex items-center gap-2 cursor-pointer transition-all active:scale-95"
                 >
                   <Key className="w-3.5 h-3.5" />
                   <span>Verify / Re-run KMS Activation</span>
@@ -501,66 +591,66 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 3.6: WINDOWS 10 SETTINGS APP */}
         {activeWindow === 'settings' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-[#1f1f1f] border border-neutral-700 rounded-xl shadow-2xl text-slate-100 z-30 overflow-hidden animate-in fade-in zoom-in-95 font-sans">
-            <div className="bg-[#181818] px-4 py-2.5 flex items-center justify-between border-b border-neutral-800 text-xs font-semibold">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-sky-400" />
-                <span>Windows Settings</span>
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-2xl bg-[#1f1f1f] border border-neutral-700 rounded-xl shadow-2xl text-slate-100 z-30 overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 font-sans">
+            <div className="bg-[#181818] px-4 py-2.5 flex items-center justify-between border-b border-neutral-800 text-xs font-semibold shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                <Settings className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="truncate">Windows Settings</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-600 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-600 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex h-96">
+            <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
               {/* Settings Sidebar */}
-              <div className="w-48 bg-[#181818] border-r border-neutral-800 p-3 space-y-1 text-xs">
+              <div className="w-full sm:w-48 bg-[#181818] border-b sm:border-b-0 sm:border-r border-neutral-800 p-2 sm:p-3 flex sm:flex-col gap-1 text-xs shrink-0 overflow-x-auto">
                 <button
                   onClick={() => setSettingsTab('about')}
-                  className={`w-full text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors ${settingsTab === 'about' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
+                  className={`flex-1 sm:flex-initial text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors shrink-0 ${settingsTab === 'about' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
                 >
                   <Cpu className="w-4 h-4" />
                   <span>About PC</span>
                 </button>
                 <button
                   onClick={() => setSettingsTab('activation')}
-                  className={`w-full text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors ${settingsTab === 'activation' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
+                  className={`flex-1 sm:flex-initial text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors shrink-0 ${settingsTab === 'activation' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
                 >
                   <Key className="w-4 h-4" />
                   <span>Activation</span>
                 </button>
                 <button
                   onClick={() => setSettingsTab('network')}
-                  className={`w-full text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors ${settingsTab === 'network' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
+                  className={`flex-1 sm:flex-initial text-left p-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors shrink-0 ${settingsTab === 'network' ? 'bg-[#0078d7] text-white font-semibold' : 'hover:bg-neutral-800 text-slate-300'}`}
                 >
                   <Wifi className="w-4 h-4" />
-                  <span>Network Status</span>
+                  <span>Network</span>
                 </button>
               </div>
 
               {/* Settings Content */}
-              <div className="flex-1 p-6 overflow-y-auto text-xs space-y-4">
+              <div className="flex-1 p-4 sm:p-6 overflow-y-auto text-xs space-y-4">
                 {settingsTab === 'about' && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-light text-white">About your PC</h3>
+                    <h3 className="text-base sm:text-lg font-light text-white">About your PC</h3>
                     
                     <div className="space-y-2 bg-[#282828] p-4 rounded-xl border border-neutral-700">
                       <h4 className="font-semibold text-sky-400">Device specifications</h4>
-                      <div className="grid grid-cols-2 gap-2 text-slate-300 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 pt-1">
                         <div>Device name: <strong className="text-white">WIN10-LABPC</strong></div>
                         <div>Processor: <strong className="text-white">Intel(R) Core(TM) i7-12700K</strong></div>
                         <div>Installed RAM: <strong className="text-white">16.0 GB (15.8 GB usable)</strong></div>
-                        <div>System type: <strong className="text-white">64-bit operating system, x64-based processor</strong></div>
+                        <div>System type: <strong className="text-white">64-bit OS, x64-based</strong></div>
                       </div>
                     </div>
 
                     <div className="space-y-2 bg-[#282828] p-4 rounded-xl border border-neutral-700">
                       <h4 className="font-semibold text-sky-400">Windows specifications</h4>
-                      <div className="grid grid-cols-2 gap-2 text-slate-300 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 pt-1">
                         <div>Edition: <strong className="text-white">Windows 10 Pro</strong></div>
                         <div>Version: <strong className="text-white">22H2</strong></div>
                         <div>OS build: <strong className="text-white">19045.3803</strong></div>
-                        <div>Experience: <strong className="text-white">Windows Feature Experience Pack</strong></div>
+                        <div>Experience: <strong className="text-white">Windows Feature Pack</strong></div>
                       </div>
                     </div>
                   </div>
@@ -568,7 +658,7 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
                 {settingsTab === 'activation' && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-light text-white">Activation</h3>
+                    <h3 className="text-base sm:text-lg font-light text-white">Activation</h3>
                     <div className="p-4 bg-[#282828] rounded-xl border border-neutral-700 space-y-3">
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
@@ -587,9 +677,9 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
                 {settingsTab === 'network' && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-light text-white">Network Status</h3>
+                    <h3 className="text-base sm:text-lg font-light text-white">Network Status</h3>
                     <div className="p-4 bg-[#282828] rounded-xl border border-neutral-700 flex items-center gap-3">
-                      <Wifi className="w-6 h-6 text-sky-400" />
+                      <Wifi className="w-6 h-6 text-sky-400 shrink-0" />
                       <div>
                         <h4 className="font-semibold text-white">Campus-Lab-Ethernet</h4>
                         <p className="text-slate-400 text-[11px]">You're connected to the internet.</p>
@@ -604,26 +694,26 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* WINDOW 4: RUBRIC GRADE REPORT */}
         {activeWindow === 'rubric' && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-amber-400" />
-                <span>Student Evaluation & Score Card</span>
+          <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[95vw] max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-slate-100 z-30 overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
+            <div className="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                <Award className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="truncate">Student Evaluation & Score Card</span>
               </div>
-              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setActiveWindow('none')} className="p-1 hover:bg-rose-500 rounded text-slate-400 hover:text-white cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {evaluationResult ? (
-              <div className="p-6 space-y-6 max-h-[480px] overflow-y-auto text-xs">
-                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto text-xs flex-1">
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-slate-950 rounded-xl border border-slate-800 gap-3">
                   <div>
-                    <h3 className="text-lg font-extrabold text-white">{student.name || 'Anonymous Student'}</h3>
-                    <p className="text-slate-400 text-xs">Section: {student.section || 'Lab Section'} • Task: {task.title}</p>
+                    <h3 className="text-base sm:text-lg font-extrabold text-white">{student.name || 'Anonymous Student'}</h3>
+                    <p className="text-slate-400 text-[11px] sm:text-xs">Section: {student.section || 'Lab Section'} • Task: {task.title}</p>
                   </div>
-                  <div className="text-right">
-                    <span className={`text-2xl font-black ${evaluationResult.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <div className="text-right shrink-0">
+                    <span className={`text-xl sm:text-2xl font-black ${evaluationResult.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
                       {evaluationResult.percentage}%
                     </span>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Grade: {evaluationResult.grade}</p>
@@ -674,11 +764,11 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={() => exportToCSV(evaluationResult)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer active:scale-95"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download CSV Report</span>
@@ -688,7 +778,7 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                     <button
                       type="button"
                       onClick={onViewFullEvaluation}
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs transition-colors cursor-pointer active:scale-95"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>Full Assessment Report</span>
@@ -710,12 +800,12 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
         {/* Start Menu Popup */}
         {startMenuOpen && (
-          <div className={`absolute bottom-14 ${os === 'win11' ? 'left-1/2 -translate-x-1/2' : 'left-2'} ${os === 'win10' ? 'w-[520px]' : 'w-80'} bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-4 text-slate-100 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2`}>
+          <div className={`absolute bottom-14 ${os === 'win11' ? 'left-1/2 -translate-x-1/2' : 'left-2'} w-[94vw] sm:w-[520px] max-w-lg bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-4 text-slate-100 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 max-h-[75vh] overflow-y-auto`}>
             {os === 'win10' ? (
               /* WINDOWS 10 START MENU WITH LIVE TILES */
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 {/* Left App List */}
-                <div className="w-48 space-y-2 text-xs border-r border-slate-800 pr-3">
+                <div className="w-full sm:w-48 space-y-2 text-xs border-b sm:border-b-0 sm:border-r border-slate-800 pb-3 sm:pb-0 sm:pr-3">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
                     <div className="w-7 h-7 rounded-full bg-[#0078d7] flex items-center justify-center font-bold text-xs text-white">
                       {student.name ? student.name.charAt(0) : 'S'}
@@ -723,47 +813,49 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                     <span className="font-semibold text-xs truncate">{student.name || 'Student'}</span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
                     <div 
                       onClick={() => { setActiveWindow('this_pc'); setStartMenuOpen(false); }}
-                      className="p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300"
+                      className="p-2 sm:p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300 active:bg-slate-700"
                     >
-                      <Monitor className="w-4 h-4 text-sky-400" /> File Explorer
+                      <Monitor className="w-4 h-4 text-sky-400 shrink-0" /> <span className="truncate">File Explorer</span>
                     </div>
                     <div 
                       onClick={() => { setActiveWindow('cmd'); setStartMenuOpen(false); }}
-                      className="p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300"
+                      className="p-2 sm:p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300 active:bg-slate-700"
                     >
-                      <Terminal className="w-4 h-4 text-emerald-400" /> Command Prompt
+                      <Terminal className="w-4 h-4 text-emerald-400 shrink-0" /> <span className="truncate">Command Prompt</span>
                     </div>
                     <div 
                       onClick={() => { setActiveWindow('settings'); setSettingsTab('about'); setStartMenuOpen(false); }}
-                      className="p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300"
+                      className="p-2 sm:p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300 active:bg-slate-700"
                     >
-                      <Settings className="w-4 h-4 text-slate-300" /> Settings
+                      <Settings className="w-4 h-4 text-slate-300 shrink-0" /> <span className="truncate">Settings</span>
                     </div>
                     <div 
                       onClick={() => { setActiveWindow('kms'); setStartMenuOpen(false); }}
-                      className="p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300"
+                      className="p-2 sm:p-1.5 hover:bg-slate-800 rounded flex items-center gap-2 cursor-pointer text-slate-300 active:bg-slate-700"
                     >
-                      <Key className="w-4 h-4 text-sky-400" /> KMS Manager
+                      <Key className="w-4 h-4 text-sky-400 shrink-0" /> <span className="truncate">KMS Manager</span>
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800 flex items-center gap-1.5">
+                  <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
                     <button
                       onClick={onShutdownComputer}
-                      className="p-1.5 hover:bg-rose-950 rounded text-rose-400 cursor-pointer"
+                      className="px-3 py-1.5 hover:bg-rose-950/80 bg-rose-950/30 border border-rose-800/50 rounded-lg text-rose-400 cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
                       title="Shut Down"
                     >
                       <Power className="w-4 h-4" />
+                      <span>Shut Down</span>
                     </button>
                     <button
                       onClick={onRestartComputer}
-                      className="p-1.5 hover:bg-amber-950 rounded text-amber-400 cursor-pointer"
+                      className="px-3 py-1.5 hover:bg-amber-950/80 bg-amber-950/30 border border-amber-800/50 rounded-lg text-amber-400 cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
                       title="Restart"
                     >
                       <RotateCcw className="w-4 h-4" />
+                      <span>Restart</span>
                     </button>
                   </div>
                 </div>
@@ -775,14 +867,14 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div 
                         onClick={() => { setActiveWindow('this_pc'); setStartMenuOpen(false); }}
-                        className="bg-[#0078d7] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all"
+                        className="bg-[#0078d7] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all active:scale-95"
                       >
                         <Folder className="w-5 h-5 text-white" />
                         <span className="text-xs font-semibold">Explorer</span>
                       </div>
                       <div 
                         onClick={() => { setActiveWindow('cmd'); setStartMenuOpen(false); }}
-                        className="bg-[#107c41] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all"
+                        className="bg-[#107c41] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all active:scale-95"
                       >
                         <Terminal className="w-5 h-5 text-white" />
                         <span className="text-xs font-semibold">Terminal</span>
@@ -795,14 +887,14 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div 
                         onClick={() => { setActiveWindow('kms'); setStartMenuOpen(false); }}
-                        className="bg-[#d83b01] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all"
+                        className="bg-[#d83b01] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all active:scale-95"
                       >
                         <Key className="w-5 h-5 text-white" />
                         <span className="text-xs font-semibold">KMS Activation</span>
                       </div>
                       <div 
                         onClick={() => { setActiveWindow('rubric'); setStartMenuOpen(false); }}
-                        className="bg-[#5c2d91] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all"
+                        className="bg-[#5c2d91] p-3 rounded h-20 flex flex-col justify-between hover:brightness-110 cursor-pointer transition-all active:scale-95"
                       >
                         <Award className="w-5 h-5 text-white" />
                         <span className="text-xs font-semibold">Rubric Grade</span>
