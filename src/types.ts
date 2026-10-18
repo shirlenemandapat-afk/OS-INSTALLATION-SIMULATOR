@@ -114,6 +114,7 @@ export interface ScoreDetail {
 }
 
 export interface EvaluationResult {
+  id?: string;
   student: StudentInfo;
   task: TaskRequirement;
   selectedOS: OSType;
@@ -125,4 +126,5 @@ export interface EvaluationResult {
   passed: boolean;
   completionTimeSeconds: number;
   timestamp: string;
+  archived?: boolean;
 }
