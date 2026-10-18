@@ -154,13 +154,19 @@ export const EvaluationDashboard: React.FC<EvaluationDashboardProps> = ({
 
           {/* Right: Student Info & Task Metadata */}
           <div className="md:col-span-7 space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1">
                 <span className="text-slate-400 flex items-center gap-1.5 font-medium">
                   <User className="w-3.5 h-3.5 text-blue-400" /> Student Identity
                 </span>
                 <p className="font-bold text-slate-100 text-sm">{result.student.name}</p>
                 <p className="text-slate-400">Section: {result.student.section}</p>
+                {result.student.studentId && (
+                  <p className="text-slate-500 font-mono text-[11px]">ID: {result.student.studentId}</p>
+                )}
+                {result.student.teacherName && (
+                  <p className="text-indigo-400 font-medium text-[11px]">Teacher: {result.student.teacherName}</p>
+                )}
               </div>
 
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1">

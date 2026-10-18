@@ -1,9 +1,44 @@
 export type OSType = 'win7' | 'win10' | 'win11';
 
 export interface StudentInfo {
+  lrn?: string;
+  studentId?: string;
+  firstName?: string;
+  middleInitial?: string;
+  lastName?: string;
+  name: string; // Combined display name (First M. Last)
+  section: string; // Year & Section
+  teacherId?: string;
+  teacherName?: string;
+  teacherEmail?: string;
+  password?: string;
+}
+
+export interface StudentAccount {
+  id: string;
+  lrn: string;
+  firstName: string;
+  middleInitial?: string;
+  lastName: string;
   name: string;
   section: string;
+  teacherId: string;
+  teacherName: string;
+  teacherEmail: string;
+  password: string;
+  createdAt: string;
 }
+
+export interface TeacherAccount {
+  id: string;
+  fullName: string;
+  email: string; // depedqc email (e.g., name@depedqc.ph)
+  department?: string;
+  employeeId?: string;
+  password?: string;
+  createdAt: string;
+}
+
 
 export interface TaskRequirement {
   id: string;
