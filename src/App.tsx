@@ -307,7 +307,7 @@ export default function App() {
         />
       )}
 
-      {/* 4. Rebooting / BIOS Splash Screen (Enforces Keyboard & Touch Navigation) */}
+      {/* 4. Rebooting / BIOS Splash Screen (Enforces Keyboard & Mouse Navigation) */}
       {state.step === 'rebooting' && (
         <RebootSplashScreen
           diskSizeGB={state.assignedTask.diskSizeGB}

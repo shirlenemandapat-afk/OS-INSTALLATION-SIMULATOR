@@ -37,7 +37,8 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
   // Terminal & KMS state
   const [cmdInput, setCmdInput] = useState('');
   const [isKmsActivated, setIsKmsActivated] = useState(true);
-  const [kmsHost, setKmsHost] = useState('kms.illinois.edu:1688');
+  const [kmsHost, setKmsHost] = useState(os === 'win7' ? 'cites-kms.ad.uiuc.edu' : 'kms.illinois.edu:1688');
+  const [kmsPopupStep, setKmsPopupStep] = useState<0 | 1 | 2>(0); // 1 = server configured popup, 2 = activated popup
 
   // OS Specific Generic KMS Client Keys (from Microsoft / Illinois WebStore documentation)
   const defaultKmsKey = os === 'win7'
@@ -250,15 +251,15 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
         <div className="absolute top-8 left-8 flex flex-col gap-5 text-slate-100 text-xs text-center font-medium z-10">
           <div 
             onClick={() => setActiveWindow('this_pc')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-white/10 cursor-pointer w-20 transition-all group"
+            className="flex flex-col items-center gap-1 p-2 rounded hover:bg-white/10 cursor-pointer w-20 transition-all group"
           >
             <Monitor className="w-9 h-9 text-sky-300 group-hover:scale-110 transition-transform drop-shadow-md" />
-            <span className="text-shadow">This PC</span>
+            <span className="text-shadow">{os === 'win7' ? 'Computer' : 'This PC'}</span>
           </div>
 
           <div 
             onClick={() => setActiveWindow('cmd')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-white/10 cursor-pointer w-20 transition-all group"
+            className="flex flex-col items-center gap-1 p-2 rounded hover:bg-white/10 cursor-pointer w-20 transition-all group"
           >
             <Terminal className="w-9 h-9 text-emerald-400 group-hover:scale-110 transition-transform drop-shadow-md" />
             <span className="text-shadow">Command Prompt</span>
@@ -266,19 +267,27 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
 
           <div 
             onClick={() => setActiveWindow('sysinfo')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-white/10 cursor-pointer w-20 transition-all group"
+            className="flex flex-col items-center gap-1 p-2 rounded hover:bg-white/10 cursor-pointer w-20 transition-all group"
           >
             <Cpu className="w-9 h-9 text-indigo-400 group-hover:scale-110 transition-transform drop-shadow-md" />
             <span className="text-shadow">System Info</span>
           </div>
 
           <div 
-            onClick={() => setActiveWindow('kms')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-white/10 cursor-pointer w-20 transition-all group"
-            title="University KMS Activation Tool"
+            onClick={() => {
+              if (os === 'win7') {
+                setKmsPopupStep(1);
+              } else {
+                setActiveWindow('kms');
+              }
+            }}
+            className="flex flex-col items-center gap-1 p-2 rounded hover:bg-white/10 cursor-pointer w-20 transition-all group"
+            title="University of Illinois WebStore KMS Activation Script"
           >
-            <Key className="w-9 h-9 text-sky-400 group-hover:scale-110 transition-transform drop-shadow-md" />
-            <span className="text-shadow">KMS Tool</span>
+            <div className="w-9 h-9 bg-slate-900 border border-slate-600 rounded flex items-center justify-center text-amber-400 font-mono text-[9px] font-bold shadow-md">
+              .BAT
+            </div>
+            <span className="text-shadow text-[10px] break-all">activateWindows.bat</span>
           </div>
 
           {os === 'win10' && (
@@ -370,94 +379,7 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
               </button>
             </div>
 
-            {/* Quick Touch Commands Helper Bar for Cellphone / Touchscreen Users */}
-            <div className="bg-slate-950 px-3 py-1.5 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] font-sans shrink-0">
-              <span className="text-slate-400 text-[10px] uppercase font-bold shrink-0">📱 Quick Tap:</span>
-              {[
-                { label: 'diskpart', cmd: 'diskpart' },
-                { label: 'slmgr /ato', cmd: 'slmgr.vbs /ato' },
-                { label: 'slmgr /dli', cmd: 'slmgr.vbs /dli' },
-                { label: 'systeminfo', cmd: 'systeminfo' },
-                { label: 'ipconfig', cmd: 'ipconfig' },
-                { label: 'help', cmd: 'help' },
-                { label: 'cls', cmd: 'cls' }
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                    setCmdInput(item.cmd);
-                    // trigger command immediately
-                    const cmd = item.cmd.trim().toLowerCase();
-                    const newLogs = [...cmdLogs, `C:\\Users\\${student.name || 'Student'}> ${item.cmd}`];
 
-                    if (cmd === 'cls' || cmd === 'clear') {
-                      setCmdLogs([]);
-                      setCmdInput('');
-                      return;
-                    } else if (cmd === 'help') {
-                      newLogs.push('Available commands:');
-                      newLogs.push('  diskpart          - View disk partitions & volume details');
-                      newLogs.push('  systeminfo        - View OS build, BIOS boot mode, and RAM');
-                      newLogs.push('  ver               - Display Windows version');
-                      newLogs.push('  ipconfig          - Display virtual network configuration');
-                      newLogs.push('  slmgr.vbs /ipk <key>   - Install KMS Client Setup Key');
-                      newLogs.push('  slmgr.vbs /skms <host> - Set KMS Server Host (e.g. kms.illinois.edu:1688)');
-                      newLogs.push('  slmgr.vbs /ato         - Activate Windows with KMS server');
-                      newLogs.push('  slmgr.vbs /dli         - Display KMS License Information');
-                      newLogs.push('  slmgr.vbs /dlv         - Display Detailed KMS License Information');
-                      newLogs.push('  cls                    - Clear screen');
-                    } else if (cmd.includes('slmgr.vbs /ato') || cmd.includes('slmgr /ato')) {
-                      setIsKmsActivated(true);
-                      newLogs.push(`Activating Windows(R), ${os === 'win7' ? '7 Professional' : '10 Pro'} edition...`);
-                      newLogs.push(`Product activated successfully via KMS (${kmsHost}).`);
-                    } else if (cmd.includes('slmgr.vbs /dli') || cmd.includes('slmgr /dli')) {
-                      newLogs.push(`Name: Windows(R), ${os === 'win7' ? '7 Professional' : '10 Pro'} edition`);
-                      newLogs.push(`Description: Windows Operating System - VOLUME_KMSCLIENT channel`);
-                      newLogs.push(`Partial Product Key: ${installedProductKey.slice(-5)}`);
-                      newLogs.push(`License Status: ${isKmsActivated ? 'Licensed (Grace period: 180 days)' : 'Notification'}`);
-                      newLogs.push(`Key Management Service client information:`);
-                      newLogs.push(`  Registered KMS machine name: ${kmsHost}`);
-                      newLogs.push(`  KMS host caching: Enabled`);
-                    } else if (cmd === 'diskpart') {
-                      newLogs.push(`Microsoft DiskPart version ${os === 'win7' ? '6.1.7601' : '10.0.19045'} (${os === 'win7' ? 'Windows 7' : 'Windows 10'})`);
-                      newLogs.push('Disk 0 Online: ' + task.diskSizeGB + ' GB');
-                      if (simulationState?.partitions && simulationState.partitions.length > 0) {
-                        simulationState.partitions.forEach((p) => {
-                          newLogs.push(`  Volume ${p.partitionNumber || 0}   ${p.name}   ${(p.sizeMB / 1024).toFixed(1)} GB   ${p.formatted ? 'NTFS' : 'RAW'}`);
-                        });
-                      } else {
-                        newLogs.push('  No partitions defined. Disk is unallocated.');
-                      }
-                    } else if (cmd === 'systeminfo') {
-                      newLogs.push(`Host Name:           WIN-${os.toUpperCase()}-LABPC`);
-                      newLogs.push(`OS Name:             Microsoft Windows ${os === 'win7' ? '7 Professional' : os === 'win10' ? '10 Pro (22H2)' : '11 Pro'}`);
-                      newLogs.push(`OS Version:          ${os === 'win7' ? '6.1.7601 Service Pack 1 Build 7601' : os === 'win10' ? '10.0.19045 N/A Build 19045' : '10.0.22631 Build 22631'}`);
-                      newLogs.push(`Student Name:        ${student.name || 'Anonymous'}`);
-                      newLogs.push(`Section:             ${student.section || 'N/A'}`);
-                      newLogs.push(`System Type:         x64-based PC`);
-                      newLogs.push(`BIOS Boot Mode:      ${simulationState?.biosConfig.bootMode.toUpperCase() || 'UEFI'}`);
-                      newLogs.push(`SATA Controller:     ${simulationState?.biosConfig.sataMode.toUpperCase() || 'AHCI'}`);
-                      newLogs.push(`KMS License Status:  ${isKmsActivated ? 'Activated (kms.illinois.edu)' : 'Pending'}`);
-                      newLogs.push(`Boot Priority USB:   ${simulationState?.biosConfig.bootOrder[0] === 'usb' ? 'OK (1st)' : 'Incorrect'}`);
-                    } else if (cmd === 'ipconfig') {
-                      newLogs.push('Windows IP Configuration');
-                      newLogs.push('');
-                      newLogs.push('Ethernet adapter Ethernet 1:');
-                      newLogs.push('   IPv4 Address. . . . . . . . . . . : 192.168.1.145');
-                      newLogs.push('   Subnet Mask . . . . . . . . . . . : 255.255.255.0');
-                      newLogs.push('   Default Gateway . . . . . . . . . : 192.168.1.1');
-                    }
-                    setCmdLogs(newLogs);
-                    setCmdInput('');
-                  }}
-                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-slate-200 rounded border border-slate-700 shrink-0 cursor-pointer active:scale-95 transition-transform font-mono text-[10px]"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
 
             <div className="p-4 h-64 overflow-y-auto space-y-1 flex-1">
               {cmdLogs.map((log, i) => (
@@ -1046,6 +968,98 @@ export const DesktopSimulator: React.FC<DesktopSimulatorProps> = ({
           </div>
         )}
       </div>
+
+      {/* AUTHENTIC ILLINOIS WEBSTORE KMS ACTIVATION SEQUENCE (win7_a.jpg, win7_b.jpg, win7_c.jpg, win7_d.jpg) */}
+      {kmsPopupStep > 0 && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[110] p-4 font-sans select-none animate-in fade-in duration-100">
+          <div className="relative w-full max-w-lg flex flex-col items-center">
+            
+            {/* Background Command Prompt Window matching win7_a.jpg and win7_c.jpg */}
+            <div className="w-full bg-black border-2 border-[#5B8CB9] rounded-[3px] shadow-2xl overflow-hidden text-white font-mono text-xs mb-[-60px]">
+              {/* Cmd Title Bar */}
+              <div 
+                className="px-3 py-1 flex items-center justify-between text-xs text-[#122b44] border-b border-[#315d82]"
+                style={{
+                  background: 'linear-gradient(to bottom, #dbebfb 0%, #bbd8f4 45%, #9bc2ea 55%, #83aede 100%)'
+                }}
+              >
+                <div className="flex items-center gap-1.5 font-sans font-normal text-[12px]">
+                  <span className="w-3.5 h-3 bg-black text-white text-[8px] flex items-center justify-center font-mono">c:\</span>
+                  <span>C:\Windows\System32\cmd.exe</span>
+                </div>
+                <div className="flex items-center gap-1 text-[9px] text-slate-700 font-sans">
+                  <span>_</span>
+                  <span>□</span>
+                  <span>✕</span>
+                </div>
+              </div>
+
+              {/* Cmd Body */}
+              <div className="p-4 min-h-[140px] text-white space-y-1">
+                <p>
+                  {kmsPopupStep === 1 
+                    ? 'Configuring the activation server...' 
+                    : 'Activating...'}
+                </p>
+                <span className="inline-block w-2 h-3.5 bg-white animate-pulse" />
+              </div>
+            </div>
+
+            {/* Foreground Windows Script Host Dialog matching win7_b.jpg & win7_d.jpg */}
+            <div className="bg-white border-2 border-[#5B8CB9] rounded-[3px] shadow-2xl max-w-sm w-full text-black overflow-hidden relative z-20 animate-in zoom-in-95 duration-150">
+              {/* Title Bar */}
+              <div 
+                className="px-3 py-1 flex items-center justify-between text-xs text-[#122b44] border-b border-[#315d82]"
+                style={{
+                  background: 'linear-gradient(to bottom, #dbebfb 0%, #bbd8f4 45%, #9bc2ea 55%, #83aede 100%)'
+                }}
+              >
+                <span className="font-normal text-[12px] drop-shadow-[0_1px_0_rgba(255,255,255,0.8)]">Windows Script Host</span>
+                <button 
+                  type="button"
+                  onClick={() => setKmsPopupStep(0)} 
+                  className="hover:bg-rose-600 hover:text-white px-1.5 rounded-[1px] text-[10px]"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 bg-white text-xs leading-relaxed text-black">
+                {kmsPopupStep === 1 ? (
+                  <span>Key Management Service machine name set to cites-kms.ad.uiuc.edu successfully.</span>
+                ) : (
+                  <div className="space-y-1">
+                    <p>Activating Windows(R) 7, Enterprise edition (ae2ee509-1b34-41c0-acb7-6d4650168915) ...</p>
+                    <p>Product activated successfully.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer with OK button */}
+              <div className="bg-[#F0F0F0] border-t border-slate-300 px-4 py-2.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (kmsPopupStep === 1) {
+                      setKmsPopupStep(2);
+                    } else {
+                      setKmsPopupStep(0);
+                      setIsKmsActivated(true);
+                    }
+                  }}
+                  className="px-6 py-1 bg-gradient-to-b from-[#F2F2F2] via-[#EBEBEB] to-[#D4D4D4] hover:border-[#3C7FB1] hover:shadow-[0_0_5px_rgba(60,127,177,0.8)] border border-[#707070] text-black text-xs rounded-[3px] shadow-xs cursor-pointer"
+                  autoFocus
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

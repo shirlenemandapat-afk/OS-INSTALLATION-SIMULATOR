@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { OSType, PartitionItem, TaskRequirement } from '../types';
-import { HardDrive, Plus, Trash2, RefreshCw, Layers, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { 
+  HardDrive, 
+  Trash2, 
+  Layers, 
+  Plus, 
+  AlertTriangle,
+  FolderOpen,
+  RotateCw
+} from 'lucide-react';
 
 interface PartitionManagerProps {
   os: OSType;
@@ -19,51 +27,60 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
   onUpdatePartitions,
   onNextStep
 }) => {
-  const [showNewModal, setShowNewModal] = useState(false);
+  // Advanced drive options toggle (matches win7_8.jpg)
+  const [showDriveOptions, setShowDriveOptions] = useState(false);
+  
+  // Inline "New" partition creation form
+  const [showInlineNew, setShowInlineNew] = useState(false);
   const [inputMB, setInputMB] = useState<number>(task.diskSizeGB * 1024);
+  
+  // Authentic Windows 7 system dialog prompts
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFormatConfirm, setShowFormatConfirm] = useState(false);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
   const totalDriveMB = task.diskSizeGB * 1024;
   const unallocated = partitions.find(p => p.type === 'unallocated');
   const availableUnallocatedMB = unallocated ? unallocated.sizeMB : 0;
-  const hasUserPartitions = partitions.some(p => p.type === 'primary');
-  const isFirstPartition = !hasUserPartitions;
+  const selectedPart = partitions.find(p => p.id === selectedPartitionId);
 
   const handleSelectPartition = (id: string) => {
     onUpdatePartitions(partitions, id);
-    setErrorMsg('');
+    const target = partitions.find(p => p.id === id);
+    if (target?.type === 'unallocated') {
+      setStatusNotice('Windows cannot be installed to this hard disk space. Windows must be installed to a partition formatted as NTFS.');
+    } else if (target?.type === 'system' || target?.type === 'msr' || target?.type === 'recovery') {
+      setStatusNotice(`Windows cannot be installed to ${target.name}. (Show details)`);
+    } else {
+      setStatusNotice(null);
+    }
   };
 
-  // Open New Partition Modal with dynamic space calculation
-  const handleOpenNewModal = () => {
+  const handleOpenNewInline = () => {
     if (!unallocated || unallocated.sizeMB <= 0) {
-      setErrorMsg('No unallocated space remaining on this drive. Delete an existing partition to free space.');
+      setStatusNotice('There is no unallocated space available on this drive. Delete an existing partition first.');
       return;
     }
-
-    // If it's the very first partition, total disk space appears.
-    // If user already created a partition, the remaining total unallocated space appears.
     setInputMB(unallocated.sizeMB);
-    setErrorMsg('');
-    setShowNewModal(true);
+    setShowInlineNew(true);
+    setStatusNotice(null);
   };
 
-  const handleCreatePartition = () => {
+  const handleApplyNewPartition = () => {
     if (inputMB <= 0) {
-      setErrorMsg('Please specify a partition size greater than 0 MB.');
+      setStatusNotice('Please specify a valid partition size greater than 0 MB.');
       return;
     }
 
     if (!unallocated || inputMB > unallocated.sizeMB) {
-      setErrorMsg(`Specified partition size (${inputMB.toLocaleString()} MB) exceeds available unallocated space (${availableUnallocatedMB.toLocaleString()} MB).`);
+      setStatusNotice(`Specified partition size (${inputMB.toLocaleString()} MB) exceeds available unallocated space (${availableUnallocatedMB.toLocaleString()} MB).`);
       return;
     }
 
     const hasSystemPart = partitions.some(p => p.type === 'system' || p.type === 'recovery');
     if (!hasSystemPart) {
-      // First time creating a partition -> Trigger authentic Windows system files prompt!
-      setShowNewModal(false);
+      setShowInlineNew(false);
       setShowSystemPrompt(true);
     } else {
       executePartitionCreation(false);
@@ -79,19 +96,17 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
 
     if (createSystemPartitions) {
       if (os === 'win7') {
-        // Win 7 creates 100 MB System Reserved partition
         newPartitionsList.push({
           id: 'part_sys_reserved',
           driveNumber: 0,
           partitionNumber: 1,
-          name: 'Drive 0 Partition 1: System Reserved',
+          name: 'Disk 0 Partition 1: System Reserved',
           sizeMB: 100,
           type: 'system',
           formatted: true
         });
         remainingMB -= 100;
       } else {
-        // Win 10 / 11 creates Recovery / EFI System (100MB) & MSR (16MB)
         newPartitionsList.push({
           id: 'part_efi_sys',
           driveNumber: 0,
@@ -114,18 +129,16 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
       }
     }
 
-    // Existing primary count
     const existingPrimaries = partitions.filter(p => p.type === 'primary');
     const nextPrimaryNum = existingPrimaries.length + (createSystemPartitions ? (os === 'win7' ? 2 : 3) : 1);
 
-    // Calculate Primary Partition Size
     const actualPrimaryMB = Math.min(inputMB, remainingMB);
     const newPrimaryId = `part_primary_${Date.now()}`;
     const newPrimary: PartitionItem = {
       id: newPrimaryId,
       driveNumber: 0,
       partitionNumber: nextPrimaryNum,
-      name: `Drive 0 Partition ${nextPrimaryNum}`,
+      name: `Disk 0 Partition ${nextPrimaryNum}`,
       sizeMB: actualPrimaryMB,
       type: 'primary',
       formatted: false
@@ -133,17 +146,15 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
 
     remainingMB -= actualPrimaryMB;
 
-    // Existing system or reserved partitions retained
     const existingNonUnallocated = partitions.filter(p => p.type !== 'unallocated');
     const updated = [...existingNonUnallocated, ...newPartitionsList, newPrimary];
 
-    // If there is any remaining unallocated space, keep it in the list
     if (remainingMB > 10) {
       updated.push({
         id: 'part_unallocated',
         driveNumber: 0,
         partitionNumber: null,
-        name: 'Drive 0 Unallocated Space',
+        name: 'Disk 0 Unallocated Space',
         sizeMB: remainingMB,
         type: 'unallocated',
         formatted: false
@@ -151,19 +162,19 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
     }
 
     onUpdatePartitions(updated, newPrimaryId);
-    setShowNewModal(false);
+    setShowInlineNew(false);
     setShowSystemPrompt(false);
+    setStatusNotice(null);
   };
 
-  const handleDeletePartition = (id: string) => {
-    const target = partitions.find(p => p.id === id);
+  const handleConfirmDelete = () => {
+    if (!selectedPartitionId) return;
+    const target = partitions.find(p => p.id === selectedPartitionId);
     if (!target || target.type === 'unallocated') return;
 
-    // Filter out target partition
-    const filtered = partitions.filter(p => p.id !== id);
+    const filtered = partitions.filter(p => p.id !== selectedPartitionId);
     const freedMB = target.sizeMB;
 
-    // Recalculate and merge unallocated space
     const unallocatedItem = filtered.find(p => p.type === 'unallocated');
     if (unallocatedItem) {
       unallocatedItem.sizeMB += freedMB;
@@ -172,24 +183,22 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
         id: 'part_unallocated',
         driveNumber: 0,
         partitionNumber: null,
-        name: 'Drive 0 Unallocated Space',
+        name: 'Disk 0 Unallocated Space',
         sizeMB: freedMB,
         type: 'unallocated',
         formatted: false
       });
     }
 
-    // If only system/unallocated left or no primary partitions left, clean up
     const remainingPrimaries = filtered.filter(p => p.type === 'primary');
     let finalPartitions = filtered;
     if (remainingPrimaries.length === 0) {
-      // Revert completely to single unallocated total disk space
       finalPartitions = [
         {
           id: 'part_unallocated_reset',
           driveNumber: 0,
           partitionNumber: null,
-          name: 'Drive 0 Unallocated Space',
+          name: 'Disk 0 Unallocated Space',
           sizeMB: totalDriveMB,
           type: 'unallocated',
           formatted: false
@@ -198,118 +207,96 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
     }
 
     onUpdatePartitions(finalPartitions, null);
+    setShowDeleteConfirm(false);
+    setStatusNotice(null);
   };
 
-  const handleFormatPartition = (id: string) => {
+  const handleConfirmFormat = () => {
+    if (!selectedPartitionId) return;
     const updated = partitions.map(p => {
-      if (p.id === id && p.type === 'primary') {
+      if (p.id === selectedPartitionId && p.type === 'primary') {
         return { ...p, formatted: true };
       }
       return p;
     });
-    onUpdatePartitions(updated, id);
+    onUpdatePartitions(updated, selectedPartitionId);
+    setShowFormatConfirm(false);
+    setStatusNotice(null);
   };
 
   const handleProceedNext = () => {
     if (!selectedPartitionId) {
-      setErrorMsg('Please select a partition to install Windows.');
+      setStatusNotice('Please select a partition to install Windows.');
       return;
     }
     const selected = partitions.find(p => p.id === selectedPartitionId);
     if (!selected || selected.type === 'unallocated') {
-      setErrorMsg('Cannot install Windows on unallocated space. Click "New" to create a partition first.');
+      setStatusNotice('Windows cannot be installed to this hard disk space. Windows must be installed to a partition formatted as NTFS.');
       return;
     }
     if (selected.type === 'system' || selected.type === 'msr' || selected.type === 'recovery') {
-      setErrorMsg('Windows cannot be installed on a System Reserved/MSR partition. Select a Primary partition.');
+      setStatusNotice(`Windows cannot be installed to ${selected.name}. (Show details)`);
       return;
     }
-    setErrorMsg('');
+    setStatusNotice(null);
     onNextStep();
   };
 
-  const selectedPart = partitions.find(p => p.id === selectedPartitionId);
-  const remainingAfterInput = Math.max(0, availableUnallocatedMB - (inputMB || 0));
-
   return (
-    <div className="space-y-5 text-slate-100">
-      {/* Header Prompt */}
+    <div className="space-y-4 select-none text-slate-800 font-sans">
+      {/* Title - Exact match to win7_8.jpg */}
       <div>
-        <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-          <HardDrive className="w-5 h-5 text-blue-400" />
+        <h2 className="text-[17px] font-normal text-[#1E395B]">
           Where do you want to install Windows?
-        </h3>
-        <p className="text-xs text-slate-400 mt-1">
-          Select or partition Drive 0 according to your task instructions ({task.partitionReq.primarySizeGB} GB C: Drive).
-        </p>
+        </h2>
       </div>
 
-      {errorMsg && (
-        <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {/* Partitions Table Container */}
-      <div className="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-950 shadow-inner">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Total Size</th>
-              <th className="px-4 py-3">Free Space</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3 text-right">Format State</th>
+      {/* Partitions Details View Table (Pixel-perfect replica of win7_8.jpg) */}
+      <div className="border border-[#7F9DB9] rounded-[1px] bg-white overflow-hidden shadow-inner min-h-[220px]">
+        <table className="w-full text-left text-[11px] border-collapse">
+          <thead>
+            <tr className="bg-gradient-to-b from-[#F9FAFC] via-[#ECEFF4] to-[#DFE5EE] border-b border-[#A0B0C4] text-[#1E395B] font-normal">
+              <th className="py-1 px-3 border-r border-[#C5D0DC] font-normal w-1/2">Name</th>
+              <th className="py-1 px-3 border-r border-[#C5D0DC] font-normal">Total Size</th>
+              <th className="py-1 px-3 border-r border-[#C5D0DC] font-normal">Free Space</th>
+              <th className="py-1 px-3 font-normal">Type</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/80">
+          <tbody className="divide-y divide-slate-100">
             {partitions.map((p) => {
               const isSelected = p.id === selectedPartitionId;
-              const sizeGB = (p.sizeMB / 1024).toFixed(1);
-              const isUnallocatedRow = p.type === 'unallocated';
+              const isUnallocated = p.type === 'unallocated';
+              const sizeFormatted = p.sizeMB >= 1024 ? `${(p.sizeMB / 1024).toFixed(1)} GB` : `${p.sizeMB}.0 MB`;
+              const freeFormatted = p.sizeMB >= 1024 ? `${(p.sizeMB / 1024).toFixed(1)} GB` : `${p.sizeMB}.0 MB`;
+
+              let typeLabel = '';
+              if (p.type === 'system') typeLabel = 'System';
+              else if (p.type === 'primary') typeLabel = 'Primary';
+              else if (p.type === 'msr') typeLabel = 'MSR (Reserved)';
+
               return (
                 <tr
                   key={p.id}
                   onClick={() => handleSelectPartition(p.id)}
                   className={`cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-blue-600/30 text-white font-semibold border-l-4 border-l-blue-500'
-                      : isUnallocatedRow
-                      ? 'hover:bg-slate-900/80 text-amber-200/90 font-mono'
-                      : 'hover:bg-slate-900/60 text-slate-300'
+                      ? 'bg-gradient-to-b from-[#EBF3FB] via-[#DCEBFA] to-[#CEE4FA] text-black border-t border-b border-[#7DA2CE]'
+                      : 'hover:bg-[#F4F8FC] text-slate-800'
                   }`}
                 >
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <HardDrive className={`w-4 h-4 ${isSelected ? 'text-blue-400' : isUnallocatedRow ? 'text-amber-400' : 'text-slate-500'}`} />
-                    <span className={isUnallocatedRow ? 'font-medium' : ''}>{p.name}</span>
-                  </td>
-                  <td className="px-4 py-3">{sizeGB} GB ({p.sizeMB.toLocaleString()} MB)</td>
-                  <td className="px-4 py-3">{sizeGB} GB</td>
-                  <td className="px-4 py-3">
-                    <span className={`uppercase text-[10px] font-bold px-2 py-0.5 rounded ${
-                      p.type === 'primary'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : p.type === 'unallocated'
-                        ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                        : 'bg-indigo-500/10 text-indigo-400'
-                    }`}>
-                      {p.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {p.type === 'primary' ? (
-                      p.formatted ? (
-                        <span className="text-emerald-400 text-[11px] font-medium flex items-center justify-end gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Formatted
-                        </span>
-                      ) : (
-                        <span className="text-amber-400 text-[11px]">Unformatted</span>
-                      )
-                    ) : (
-                      <span className="text-slate-500">—</span>
+                  <td className="py-1.5 px-3 flex items-center gap-2">
+                    {/* Authentic Windows 7 Hard Drive Icon */}
+                    <div className="w-4 h-3.5 bg-gradient-to-b from-slate-200 to-slate-400 border border-slate-500 rounded-[1px] flex items-center justify-center shrink-0 shadow-xs">
+                      <div className="w-2.5 h-1.5 border-b border-blue-500" />
+                    </div>
+                    <span className="truncate">{p.name}</span>
+                    {p.type === 'primary' && p.formatted && (
+                      <span className="text-[10px] text-emerald-700 ml-1 font-mono">(NTFS)</span>
                     )}
                   </td>
+                  <td className="py-1.5 px-3 font-mono">{sizeFormatted}</td>
+                  <td className="py-1.5 px-3 font-mono">{freeFormatted}</td>
+                  <td className="py-1.5 px-3">{typeLabel}</td>
                 </tr>
               );
             })}
@@ -317,175 +304,276 @@ export const PartitionManager: React.FC<PartitionManagerProps> = ({
         </table>
       </div>
 
-      {/* Drive Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-2">
-          {/* New Partition Button */}
-          <button
-            onClick={handleOpenNewModal}
-            disabled={!unallocated || unallocated.sizeMB <= 0}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <span>New</span>
-          </button>
-
-          {/* Delete Partition Button */}
-          <button
-            onClick={() => selectedPartitionId && handleDeletePartition(selectedPartitionId)}
-            disabled={!selectedPart || selectedPart.type === 'unallocated'}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-4 h-4 text-rose-400" />
-            <span>Delete</span>
-          </button>
-
-          {/* Format Partition Button */}
-          <button
-            onClick={() => selectedPartitionId && handleFormatPartition(selectedPartitionId)}
-            disabled={!selectedPart || selectedPart.type !== 'primary'}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
-          >
-            <RefreshCw className="w-4 h-4 text-cyan-400" />
-            <span>Format</span>
-          </button>
-        </div>
-
-        {/* Proceed Next Button */}
-        <button
-          onClick={handleProceedNext}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-        >
-          Next &rarr;
-        </button>
-      </div>
-
-      {/* Modal: New Partition Size Input */}
-      {showNewModal && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h4 className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-400" />
-                {isFirstPartition ? 'Create Initial Partition' : 'Create Partition from Unallocated Space'}
-              </h4>
-              <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
-                Drive 0
-              </span>
-            </div>
-
-            {/* Display Total Disk Space or Remaining Unallocated Space */}
-            <div className={`p-3 rounded-xl border text-xs space-y-1 ${
-              isFirstPartition
-                ? 'bg-blue-950/50 border-blue-800/80 text-blue-200'
-                : 'bg-amber-950/50 border-amber-800/80 text-amber-200'
-            }`}>
-              <div className="flex items-center justify-between font-semibold">
-                <span>{isFirstPartition ? 'Total Disk Space Available:' : 'Remaining Total Unallocated Space:'}</span>
-                <span className="font-mono font-bold text-white text-sm">
-                  {availableUnallocatedMB.toLocaleString()} MB ({(availableUnallocatedMB / 1024).toFixed(1)} GB)
-                </span>
-              </div>
-              <p className="text-[11px] opacity-80">
-                {isFirstPartition
-                  ? `Whole drive size: ${task.diskSizeGB} GB. Enter how much space to allocate for this partition.`
-                  : `Creating partition from remaining unallocated space (${(availableUnallocatedMB / 1024).toFixed(1)} GB remaining).`}
-              </p>
-            </div>
-
-            {/* Size Input Box */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300">
-                <label className="font-medium">Partition Size (MB):</label>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setInputMB(availableUnallocatedMB)}
-                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-0.5 rounded border border-slate-700 cursor-pointer"
-                    title="Use all available space"
-                  >
-                    Max ({availableUnallocatedMB.toLocaleString()} MB)
-                  </button>
-                  {task.partitionReq.primarySizeGB * 1024 <= availableUnallocatedMB && (
-                    <button
-                      type="button"
-                      onClick={() => setInputMB(task.partitionReq.primarySizeGB * 1024)}
-                      className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-0.5 rounded border border-slate-700 cursor-pointer"
-                      title="Set to Task required size"
-                    >
-                      Task ({task.partitionReq.primarySizeGB} GB)
-                    </button>
-                  )}
-                </div>
-              </div>
-
+      {/* Inline "New" Partition Input Row */}
+      {showInlineNew && (
+        <div className="p-2.5 bg-[#F4F8FC] border border-[#B2CBE4] text-slate-800 text-xs flex flex-wrap items-center justify-between gap-2 rounded-[2px]">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-800 font-normal">Size:</span>
+            <div className="flex items-center gap-1">
               <input
                 type="number"
                 min={100}
                 max={availableUnallocatedMB}
                 value={inputMB || ''}
                 onChange={(e) => setInputMB(Math.max(0, Number(e.target.value)))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-base text-slate-100 font-mono font-bold focus:outline-none focus:border-blue-500"
-                placeholder="Enter size in MB"
+                className="w-24 px-1.5 py-0.5 text-xs border border-[#7F9DB9] bg-white text-black font-mono focus:outline-none"
                 autoFocus
               />
-
-              {/* Dynamic Preview Calculation */}
-              <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 text-slate-300">
-                <div>
-                  <span className="text-slate-400 block">New Partition Size:</span>
-                  <strong className="text-emerald-400 font-mono text-xs">
-                    {((inputMB || 0) / 1024).toFixed(1)} GB ({(inputMB || 0).toLocaleString()} MB)
-                  </strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">Remaining Unallocated:</span>
-                  <strong className="text-amber-400 font-mono text-xs">
-                    {(remainingAfterInput / 1024).toFixed(1)} GB ({remainingAfterInput.toLocaleString()} MB)
-                  </strong>
-                </div>
-              </div>
+              <span className="text-slate-600 font-normal text-xs">MB</span>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center gap-1 ml-2">
               <button
                 type="button"
-                onClick={() => setShowNewModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs cursor-pointer"
+                onClick={() => setInputMB(availableUnallocatedMB)}
+                className="text-[10px] px-1.5 py-0.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-[1px] cursor-pointer"
               >
-                Cancel
+                Max ({availableUnallocatedMB.toLocaleString()} MB)
+              </button>
+              {task.partitionReq.primarySizeGB * 1024 <= availableUnallocatedMB && (
+                <button
+                  type="button"
+                  onClick={() => setInputMB(task.partitionReq.primarySizeGB * 1024)}
+                  className="text-[10px] px-1.5 py-0.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-700 rounded-[1px] cursor-pointer font-medium"
+                >
+                  Task ({task.partitionReq.primarySizeGB} GB)
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleApplyNewPartition}
+              className="px-4 py-0.5 text-xs bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black rounded-[2px] cursor-pointer shadow-xs"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInlineNew(false)}
+              className="px-3 py-0.5 text-xs bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-[2px] cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Action Links & Drive Options Bar (Exact match to win7_8.jpg) */}
+      <div className="flex items-center justify-between text-xs pt-1">
+        {/* Left Links: Refresh & Load Driver */}
+        <div className="flex items-center gap-5">
+          <button
+            type="button"
+            onClick={() => onUpdatePartitions(partitions, selectedPartitionId)}
+            className="flex items-center gap-1.5 text-[#0066CC] hover:text-[#004B99] hover:underline cursor-pointer"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-blue-600" />
+            <span>Refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => alert("Load Driver:\n\nInsert the installation media containing driver files for storage controller, then click OK.")}
+            className="flex items-center gap-1.5 text-[#0066CC] hover:text-[#004B99] hover:underline cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-blue-600" />
+            <span>Load Driver</span>
+          </button>
+        </div>
+
+        {/* Right Link: Drive options (advanced) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowDriveOptions(!showDriveOptions)}
+            className="text-[#0066CC] hover:text-[#004B99] hover:underline cursor-pointer"
+          >
+            Drive options (<span className="underline">a</span>dvanced)
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Drive Options Toolbar */}
+      {showDriveOptions && (
+        <div className="flex items-center justify-end gap-4 text-xs pt-1 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={!selectedPart || selectedPart.type === 'unallocated'}
+            className="flex items-center gap-1 text-[#0066CC] hover:underline disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span>Delete</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFormatConfirm(true)}
+            disabled={!selectedPart || selectedPart.type !== 'primary'}
+            className="flex items-center gap-1 text-[#0066CC] hover:underline disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Layers className="w-3.5 h-3.5 text-amber-600" />
+            <span>Format</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenNewInline}
+            disabled={!unallocated || unallocated.sizeMB <= 0}
+            className="flex items-center gap-1 text-[#0066CC] hover:underline disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-emerald-600" />
+            <span>New</span>
+          </button>
+        </div>
+      )}
+
+      {/* Warning/Status Bar */}
+      <div className="min-h-[22px] flex items-center pt-2">
+        {statusNotice ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-amber-800">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+            <span>{statusNotice}</span>
+          </div>
+        ) : (
+          <div className="text-[11px] text-slate-400">
+            {selectedPart 
+              ? `Selected: ${selectedPart.name} (${selectedPart.sizeMB >= 1024 ? (selectedPart.sizeMB / 1024).toFixed(1) + ' GB' : selectedPart.sizeMB + ' MB'})`
+              : 'Select a drive partition to proceed.'}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Footer: Next Button (Right-aligned matching win7_8.jpg) */}
+      <div className="flex items-center justify-end border-t border-slate-200 pt-3">
+        <button
+          type="button"
+          onClick={handleProceedNext}
+          className="px-7 py-1 bg-gradient-to-b from-[#F2F2F2] via-[#EBEBEB] to-[#D4D4D4] border border-[#707070] hover:border-[#3C7FB1] hover:shadow-[0_0_6px_rgba(60,127,177,0.8)] active:bg-[#C8C8C8] text-black text-xs font-normal rounded-[3px] shadow-sm cursor-pointer transition-all"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Dialog: System Reserved Partition Notice (Authentic Windows 7 Modal) */}
+      {showSystemPrompt && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[120] p-4">
+          <div className="bg-[#F0F0F0] border border-[#0055EA] rounded-[3px] shadow-2xl max-w-md w-full text-slate-900 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="bg-gradient-to-r from-[#205C90] via-[#3B82C4] to-[#205C90] text-white px-3 py-1 flex items-center justify-between text-xs font-semibold">
+              <span>Windows Setup</span>
+              <button 
+                type="button" 
+                onClick={() => setShowSystemPrompt(false)} 
+                className="hover:bg-rose-600 px-1 text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 flex items-start gap-3">
+              <div className="w-7 h-7 rounded-full bg-blue-100 border border-blue-400 flex items-center justify-center shrink-0">
+                <span className="text-blue-600 font-serif font-bold text-sm">i</span>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-800 pt-0.5">
+                To ensure that all Windows features work correctly, Windows might create additional partitions for system files.
+              </p>
+            </div>
+            <div className="bg-[#F0F0F0] border-t border-slate-300 px-3 py-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => executePartitionCreation(true)}
+                className="px-6 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
+                autoFocus
+              >
+                OK
               </button>
               <button
                 type="button"
-                onClick={handleCreatePartition}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg cursor-pointer"
+                onClick={() => setShowSystemPrompt(false)}
+                className="px-5 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
               >
-                Apply
+                Cancel
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* System Reserved Partitions Notice Modal */}
-      {showSystemPrompt && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h4 className="font-bold text-sm text-slate-100 flex items-center gap-2">
-              <Info className="w-4 h-4 text-blue-400" />
-              Windows Setup Notice
-            </h4>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              To ensure that all Windows features work correctly, Windows might create additional partitions for system files (System Reserved / EFI System / MSR).
-            </p>
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+      {/* Dialog: Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[120] p-4">
+          <div className="bg-[#F0F0F0] border border-[#0055EA] rounded-[3px] shadow-2xl max-w-md w-full text-slate-900 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="bg-gradient-to-r from-[#205C90] via-[#3B82C4] to-[#205C90] text-white px-3 py-1 flex items-center justify-between text-xs font-semibold">
+              <span>Windows Setup</span>
+              <button 
+                type="button" 
+                onClick={() => setShowDeleteConfirm(false)} 
+                className="hover:bg-rose-600 px-1 text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 flex items-start gap-3">
+              <AlertTriangle className="w-7 h-7 text-amber-600 shrink-0" />
+              <p className="text-xs leading-relaxed text-slate-800 pt-0.5">
+                The partition might contain recovery files, system files, or important software from your computer manufacturer. If you delete this partition, any data stored on it will be lost.
+              </p>
+            </div>
+            <div className="bg-[#F0F0F0] border-t border-slate-300 px-3 py-2 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => executePartitionCreation(true)}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg cursor-pointer"
+                onClick={handleConfirmDelete}
+                className="px-6 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
+                autoFocus
               >
                 OK
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-5 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog: Format Confirmation */}
+      {showFormatConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[120] p-4">
+          <div className="bg-[#F0F0F0] border border-[#0055EA] rounded-[3px] shadow-2xl max-w-md w-full text-slate-900 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="bg-gradient-to-r from-[#205C90] via-[#3B82C4] to-[#205C90] text-white px-3 py-1 flex items-center justify-between text-xs font-semibold">
+              <span>Windows Setup</span>
+              <button 
+                type="button" 
+                onClick={() => setShowFormatConfirm(false)} 
+                className="hover:bg-rose-600 px-1 text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 flex items-start gap-3">
+              <AlertTriangle className="w-7 h-7 text-amber-600 shrink-0" />
+              <p className="text-xs leading-relaxed text-slate-800 pt-0.5">
+                The partition might contain recovery files, system files, or important software from your computer manufacturer. If you format this partition, any data stored on it will be lost. Do you want to continue?
+              </p>
+            </div>
+            <div className="bg-[#F0F0F0] border-t border-slate-300 px-3 py-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmFormat}
+                className="px-6 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
+                autoFocus
+              >
+                OK
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFormatConfirm(false)}
+                className="px-5 py-0.5 bg-gradient-to-b from-[#F2F2F2] to-[#D4D4D4] hover:border-[#3C7FB1] border border-[#707070] text-black text-xs rounded-[3px] cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>

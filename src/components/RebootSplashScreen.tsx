@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AlertTriangle, Keyboard, Terminal, Smartphone, Settings, Play } from 'lucide-react';
+import { AlertTriangle, Keyboard, Terminal, Settings, Play } from 'lucide-react';
 import { BiosConfig, OSType } from '../types';
 
 interface RebootSplashScreenProps {
@@ -118,13 +118,15 @@ export const RebootSplashScreen: React.FC<RebootSplashScreenProps> = ({
       
       {/* Top Right Corner Status / Key Legend */}
       <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-1.5 text-xs text-sky-400 bg-sky-950/40 px-2 py-1 rounded border border-sky-800/60">
-          <Smartphone className="w-3.5 h-3.5" />
-          <span className="text-[11px]">Touchscreen / CP Ready</span>
+        <div className="text-xs text-slate-500 font-mono">
+          Dell Inc. PowerEdge Server
         </div>
 
         <div className="text-right text-xs sm:text-sm text-slate-200 tracking-wider space-y-0.5 leading-tight select-none">
-          <div className={`${enteringStatus?.includes('Setup') ? 'text-cyan-300 font-bold' : 'text-slate-300'}`}>
+          <div 
+            onClick={triggerEnterBios}
+            className={`cursor-pointer hover:underline ${enteringStatus?.includes('Setup') ? 'text-cyan-300 font-bold' : 'text-slate-300'}`}
+          >
             F2 = System Setup
           </div>
           <div className="text-slate-300">
@@ -135,7 +137,10 @@ export const RebootSplashScreen: React.FC<RebootSplashScreenProps> = ({
               {enteringStatus}
             </div>
           )}
-          <div className={`${enteringStatus?.includes('Boot Manager') ? 'text-cyan-300 font-bold' : 'text-slate-300'}`}>
+          <div 
+            onClick={triggerBootMenu}
+            className={`cursor-pointer hover:underline ${enteringStatus?.includes('Boot Manager') ? 'text-cyan-300 font-bold' : 'text-slate-300'}`}
+          >
             F12 = PXE Boot
           </div>
         </div>
@@ -193,27 +198,6 @@ export const RebootSplashScreen: React.FC<RebootSplashScreenProps> = ({
                 BIOS Revision 6.1.0
               </span>
             </div>
-
-            {/* Prominent Touch / Mobile Quick Action Buttons for Cellphones */}
-            <div className="w-full pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={triggerEnterBios}
-                className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 text-white font-bold rounded-xl border border-blue-400/50 shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform text-sm cursor-pointer min-h-[48px]"
-              >
-                <Settings className="w-4 h-4 text-cyan-300 animate-spin" />
-                <span>Tap to Enter BIOS Setup (F2)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={triggerBootMenu}
-                className="w-full sm:w-auto px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold rounded-xl border border-slate-700 shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform text-sm cursor-pointer min-h-[48px]"
-              >
-                <Play className="w-4 h-4 text-emerald-400" />
-                <span>Boot Menu (F12)</span>
-              </button>
-            </div>
           </>
         ) : (
           /* Authentic Dell POST Boot Device Failure Screen */
@@ -226,56 +210,22 @@ export const RebootSplashScreen: React.FC<RebootSplashScreenProps> = ({
             </div>
 
             <div className="pt-2 text-slate-200 space-y-3">
-              <p className="text-cyan-300 font-bold animate-pulse">
+              <p 
+                onClick={triggerEnterBios}
+                className="text-cyan-300 font-bold animate-pulse cursor-pointer hover:underline"
+              >
                 Strike F1 to retry boot, F2 for system setup utility
               </p>
-              
-              {/* Touchscreen Action Buttons for Boot Failure */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={triggerEnterBios}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg border border-blue-400 shadow flex items-center justify-center gap-2 active:scale-95 cursor-pointer text-xs min-h-[44px]"
-                >
-                  <Settings className="w-4 h-4 text-cyan-300" />
-                  <span>Enter BIOS to Set USB First (F2)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBootFailed(false);
-                    setProgress(20);
-                  }}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg border border-slate-700 shadow flex items-center justify-center gap-2 active:scale-95 cursor-pointer text-xs min-h-[44px]"
-                >
-                  <span>Retry Boot (F1)</span>
-                </button>
-              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Interactive Keyboard & Touch Helper Bar */}
-      <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 border-t border-slate-900 pt-3">
-        <div className="flex items-center gap-2 text-slate-300 flex-wrap">
+      {/* Bottom Status Bar */}
+      <div className="w-full flex items-center justify-between gap-3 text-xs text-slate-400 border-t border-slate-900 pt-3">
+        <div className="flex items-center gap-2 text-slate-300">
           <Keyboard className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
-          <span className="text-[11px] sm:text-xs">Physical Key / Screen Touch:</span>
-          <button
-            type="button"
-            onClick={triggerEnterBios}
-            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 rounded font-mono font-bold text-[11px] transition-all active:scale-95 cursor-pointer shadow"
-          >
-            [ F2 ] System Setup
-          </button>
-          <button
-            type="button"
-            onClick={triggerBootMenu}
-            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded font-mono font-bold text-[11px] transition-all active:scale-95 cursor-pointer shadow"
-          >
-            [ F12 ] Boot Menu
-          </button>
+          <span className="text-[11px] sm:text-xs">Press <strong className="text-white">[F2]</strong> to enter BIOS Setup | <strong className="text-white">[F12]</strong> Boot Menu</span>
         </div>
 
         <div className="text-[11px] text-slate-400">

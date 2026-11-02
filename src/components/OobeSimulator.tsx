@@ -96,7 +96,8 @@ export const OobeSimulator: React.FC<OobeSimulatorProps> = ({ os, student, onFin
       return;
     }
     setPasswordError('');
-    setStep('win7_key');
+    // In Illinois Windows 7 Enterprise edition, setup moves directly to Update Settings (win7_12.jpg)
+    setStep('win7_updates');
   };
 
   const handleNextFromKey = (skip = false) => {
@@ -176,492 +177,579 @@ export const OobeSimulator: React.FC<OobeSimulatorProps> = ({ os, student, onFin
   // =========================================================================
   // WINDOWS 7 AUTHENTIC OOBE SCREENS (MATCHING ILLINOIS KMS GUIDE)
   // =========================================================================
+  // =========================================================================
+  // WINDOWS 7 AUTHENTIC OOBE SCREENS (EXACT REPLICA OF ILLINOIS KMS GUIDE win7_10.jpg - win7_15.jpg)
+  // =========================================================================
   if (os === 'win7') {
-    return (
-      <div className="fixed inset-0 select-none bg-gradient-to-tr from-blue-900 via-sky-600 to-teal-800 flex items-center justify-center p-4 z-50">
-        {/* Windows 7 Setup Window Container */}
-        <div className="w-full max-w-2xl bg-slate-100 text-slate-900 border-2 border-slate-300 rounded-md shadow-2xl overflow-hidden flex flex-col min-h-[500px] justify-between">
-          
-          {/* Windows 7 Aero Header Bar */}
-          <div className="px-4 py-2 bg-gradient-to-r from-blue-700 via-sky-600 to-blue-800 text-white font-semibold text-xs flex items-center justify-between border-b border-sky-400/50">
+    // Welcome and Preparing Desktop screens (Fullscreen Windows 7 Harmony background)
+    if (step === 'win7_welcome' || step === 'win7_preparing') {
+      return (
+        <div 
+          className="fixed inset-0 select-none flex flex-col justify-between p-6 z-50 font-sans"
+          style={{
+            background: `radial-gradient(ellipse at 50% 38%, #1a74ba 0%, #125e9f 35%, #0a4985 70%, #033465 100%)`
+          }}
+        >
+          {/* Virtual PC Top Bar */}
+          <div className="w-full bg-[#1b4366]/90 border-b border-[#3b7fae]/50 px-4 py-1 flex items-center justify-between text-xs text-white z-30 shadow-md">
             <div className="flex items-center gap-2">
-              <Monitor className="w-4 h-4 text-sky-300" />
-              <span>Set Up Windows</span>
+              <span className="w-3.5 h-3.5 rounded bg-blue-500 inline-block text-[8px] font-bold text-center leading-3">PC</span>
+              <span className="font-semibold text-xs tracking-tight text-white/95 drop-shadow">webstoretest - Windows Virtual PC</span>
             </div>
-            <div className="flex items-center gap-1.5 opacity-80">
-              <span className="w-3 h-3 rounded-full bg-slate-400/30 flex items-center justify-center text-[9px]">-</span>
-              <span className="w-3 h-3 rounded-full bg-slate-400/30 flex items-center justify-center text-[9px]">□</span>
-              <span className="w-3 h-3 rounded-full bg-slate-400/30 flex items-center justify-center text-[9px]">✕</span>
+            <div className="flex items-center gap-4 text-[11px] text-white/80">
+              <span>Action ▾</span>
+              <span>Tools ▾</span>
+              <span className="font-mono">Ctrl+Alt+Del</span>
+              <span>?</span>
+              <span className="text-white/30">|</span>
+              <span className="text-white/50 text-[10px]">_ □ ✕</span>
             </div>
           </div>
 
-          <div className="p-8 flex-1 flex flex-col justify-between">
-            {/* Windows 7 Emblem */}
-            <div className="flex items-center justify-between border-b border-slate-300 pb-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="grid grid-cols-2 gap-0.5 w-6 h-6">
-                  <div className="bg-red-500 rounded-tl-xs" />
-                  <div className="bg-green-500 rounded-tr-xs" />
-                  <div className="bg-blue-500 rounded-bl-xs" />
-                  <div className="bg-yellow-400 rounded-br-xs" />
+          <div className="my-auto flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in duration-500">
+            {step === 'win7_welcome' ? (
+              <>
+                <div className="w-24 h-24 rounded-full bg-gradient-to-b from-[#8ec4f5] to-[#2574be] border-2 border-white/80 flex items-center justify-center text-white shadow-2xl">
+                  <User className="w-14 h-14" />
                 </div>
-                <h1 className="text-xl font-bold text-blue-950">Windows 7 Professional</h1>
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-light text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Welcome</h2>
+                  <p className="text-sm text-sky-100 font-medium drop-shadow">{username || 'Student'}</p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="w-8 h-8 rounded-full border-4 border-[#6EE7F9] border-t-transparent animate-spin mx-auto drop-shadow-md" />
+                <h2 className="text-2xl font-light text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  Preparing your desktop...
+                </h2>
               </div>
-              <span className="text-[11px] text-slate-500 font-sans">Initial Configuration</span>
+            )}
+          </div>
+
+          <div className="text-center text-xs text-white/60 pb-2">
+            Windows 7 Enterprise
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        className="fixed inset-0 select-none flex flex-col items-center justify-between z-50 overflow-hidden font-sans"
+        style={{
+          background: `radial-gradient(ellipse at 50% 38%, #1a74ba 0%, #125e9f 35%, #0a4985 70%, #033465 100%)`
+        }}
+      >
+        {/* Windows 7 Harmony Light Ribbons */}
+        <svg 
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-60"
+          viewBox="0 0 1920 1080" 
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <radialGradient id="oobeCenterGlow" cx="50%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#3ca0dc" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#196cb0" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#053360" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id="oobeRibbon" x1="0%" y1="20%" x2="100%" y2="60%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
+              <stop offset="50%" stopColor="#8de0f7" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#38b6d8" stopOpacity="0.05" />
+            </linearGradient>
+          </defs>
+          <rect width="1920" height="1080" fill="url(#oobeCenterGlow)" />
+          <path d="M -100 250 Q 550 150 1200 480 T 2050 420" stroke="url(#oobeRibbon)" strokeWidth="65" fill="none" opacity="0.8" />
+          <path d="M -100 320 Q 650 240 1400 580 T 2050 560" stroke="#a0e6ff" strokeWidth="35" fill="none" opacity="0.4" />
+        </svg>
+
+        {/* TOP HEADER CONTROLS (Authentic webstoretest - Windows Virtual PC Bar matching all Illinois screenshots) */}
+        <div className="w-full bg-[#1b4366]/90 border-b border-[#3b7fae]/50 px-4 py-1 flex items-center justify-between text-xs text-white z-30 shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-3.5 h-3.5 rounded bg-blue-500 inline-block text-[8px] font-bold text-center leading-3">PC</span>
+            <span className="font-semibold text-xs tracking-tight text-white/95 drop-shadow">
+              webstoretest - Windows Virtual PC
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 text-[11px] text-white/80">
+            <span className="hover:text-white cursor-pointer transition-colors">Action ▾</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Tools ▾</span>
+            <span className="hover:text-white cursor-pointer transition-colors font-mono">Ctrl+Alt+Del</span>
+            <span className="hover:text-white cursor-pointer transition-colors">?</span>
+            <span className="text-white/30">|</span>
+            <span className="text-white/50 text-[10px]">_ □ ✕</span>
+          </div>
+        </div>
+
+        {/* Windows 7 "Set Up Windows" Aero Window (Exact replica of win7_10.jpg to win7_15.jpg) */}
+        <div className="w-full max-w-[690px] my-auto overflow-hidden shadow-[0_16px_45px_rgba(0,0,0,0.55)] transition-all relative z-10 border border-[#4a779f] rounded-[4px] flex flex-col bg-white text-slate-800 min-h-[460px]">
+          
+          {/* Aero Glass Title Bar */}
+          <div 
+            className="px-3 py-1 flex items-center justify-between text-xs border-b border-[#315d82]"
+            style={{
+              background: 'linear-gradient(to bottom, #dbebfb 0%, #bbd8f4 45%, #9bc2ea 55%, #83aede 100%)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              {step !== 'win7_user' && step !== 'win7_finalizing' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (step === 'win7_password') setStep('win7_user');
+                    else if (step === 'win7_updates') setStep('win7_password');
+                    else if (step === 'win7_datetime') setStep('win7_updates');
+                    else if (step === 'win7_network') setStep('win7_datetime');
+                  }}
+                  className="w-5 h-5 rounded-full bg-gradient-to-b from-[#4BA1E8] to-[#1C60A0] border border-[#164573] flex items-center justify-center text-white shadow-xs cursor-pointer active:scale-95"
+                  title="Back"
+                >
+                  <span className="text-[10px] font-bold">‹</span>
+                </button>
+              )}
+              {/* Windows Flag Icon */}
+              <div className="grid grid-cols-2 gap-[1px] w-3.5 h-3.5 shrink-0 shadow-xs">
+                <div className="bg-[#EA3923] rounded-tl-[1px]" />
+                <div className="bg-[#7FBA00] rounded-tr-[1px]" />
+                <div className="bg-[#00A4EF] rounded-bl-[1px]" />
+                <div className="bg-[#FFB900] rounded-br-[1px]" />
+              </div>
+              <span className="font-normal text-[#122b44] text-[12px] drop-shadow-[0_1px_0_rgba(255,255,255,0.8)]">
+                Set Up Windows
+              </span>
             </div>
 
-            {/* SCREEN 1: Choose a user name and computer name */}
-            {step === 'win7_user' && (
-              <form onSubmit={handleNextFromUser} className="space-y-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">Choose a user name for your account and name your computer</h2>
-                    <p className="text-xs text-slate-600 mt-1">
-                      The user name is required to distinguish your account on this computer.
-                    </p>
-                  </div>
+            <div className="flex items-center border border-[#769abb] rounded-[2px] overflow-hidden bg-gradient-to-b from-white/60 to-white/20 shadow-xs">
+              <span className="w-5 h-4 flex items-center justify-center text-[#244b6e] text-[9px] cursor-default border-r border-[#88a9c7]">_</span>
+              <span className="w-5 h-4 flex items-center justify-center text-slate-400 text-[8px] cursor-not-allowed border-r border-[#88a9c7]">□</span>
+              <span className="w-6 h-4 flex items-center justify-center text-[#244b6e] text-[9px] cursor-default">✕</span>
+            </div>
+          </div>
 
-                  <div className="space-y-4 max-w-md pt-2 text-xs">
+          {/* SCREEN 1: USER AND COMPUTER NAME (win7_10.jpg) */}
+          {step === 'win7_user' && (
+            <form onSubmit={handleNextFromUser} className="p-8 flex-1 flex flex-col justify-between">
+              <div className="space-y-6">
+                {/* Windows 7 Enterprise Logo Header matching win7_10.jpg */}
+                <div className="pt-2 text-center flex flex-col items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-1 w-9 h-9 shrink-0">
+                      <div className="bg-[#EA3923] rounded-tl-[2px]" />
+                      <div className="bg-[#7FBA00] rounded-tr-[2px]" />
+                      <div className="bg-[#00A4EF] rounded-bl-[2px]" />
+                      <div className="bg-[#FFB900] rounded-br-[2px]" />
+                    </div>
+                    <h1 className="text-2xl font-light text-slate-900 tracking-wide">
+                      Windows 7 <span className="font-normal text-slate-800">Enterprise</span>
+                    </h1>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <p className="text-xs text-slate-800 leading-relaxed">
+                    Choose a user name for your <span className="text-[#0066CC] hover:underline cursor-pointer">account</span> and name your computer to distinguish it on the network.
+                  </p>
+
+                  <div className="space-y-3 pt-1 text-xs">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
+                      <label className="block text-slate-700 mb-1">
                         Type a user name (for example, John):
                       </label>
                       <input
                         type="text"
                         value={username}
                         onChange={(e) => handleUsernameChange(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner"
-                        placeholder="Student"
+                        className="w-80 bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-400"
+                        placeholder="John"
                         required
                         autoFocus
                       />
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Type a computer name (for example, John-PC):
+                      <label className="block text-slate-700 mb-1">
+                        Type a <span className="text-[#0066CC] hover:underline cursor-pointer">computer name</span>:
                       </label>
                       <input
                         type="text"
                         value={computerName}
                         onChange={(e) => setComputerName(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner"
-                        placeholder="Student-PC"
+                        className="w-80 bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-400"
+                        placeholder="John-PC"
                         required
                       />
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-end border-t border-slate-300 pt-4">
+              {/* Bottom footer matching win7_10.jpg */}
+              <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-xs mt-6">
+                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]" title="Ease of Access">
+                  ⚙
+                </div>
+                <div className="flex items-center gap-6">
+                  <span className="text-[11px] text-slate-500">
+                    Copyright © 2009 Microsoft Corporation. All rights reserved.
+                  </span>
                   <button
                     type="submit"
-                    className="px-6 py-1.5 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 border border-slate-400 rounded text-slate-900 font-bold text-xs shadow transition-all cursor-pointer"
+                    className="px-7 py-1 bg-gradient-to-b from-[#F2F2F2] via-[#EBEBEB] to-[#D4D4D4] border border-[#707070] hover:border-[#3C7FB1] hover:shadow-[0_0_6px_rgba(60,127,177,0.8)] active:bg-[#C8C8C8] text-black text-xs font-normal rounded-[3px] shadow-sm cursor-pointer transition-all"
                   >
-                    <span className="underline">N</span>ext &rarr;
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* SCREEN 2: Set a password for your account */}
-            {step === 'win7_password' && (
-              <form onSubmit={handleNextFromPassword} className="space-y-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">Set a password for your account</h2>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Creating a password is a recommended security precaution that helps protect your user account.
-                    </p>
-                  </div>
-
-                  {passwordError && (
-                    <div className="p-2 bg-rose-100 border border-rose-300 rounded text-rose-800 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{passwordError}</span>
-                    </div>
-                  )}
-
-                  <div className="space-y-3 max-w-md text-xs">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Type a password (recommended):</label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner"
-                        placeholder="••••••••"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Retype your password:</label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner"
-                        placeholder="••••••••"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Type a password hint (required if password set):</label>
-                      <input
-                        type="text"
-                        value={passwordHint}
-                        onChange={(e) => setPasswordHint(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner"
-                        placeholder="e.g. My university student ID"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end border-t border-slate-300 pt-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-1.5 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 border border-slate-400 rounded text-slate-900 font-bold text-xs shadow transition-all cursor-pointer"
-                  >
-                    <span className="underline">N</span>ext &rarr;
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* SCREEN 3: Product Key & KMS Information (From Illinois WebStore Guide) */}
-            {step === 'win7_key' && (
-              <div className="space-y-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">Type your Windows product key</h2>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Your product key can be found on the Windows installation disc package or in your confirmation email.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-sky-50 border border-sky-300 rounded text-slate-700 text-xs flex items-start gap-2.5">
-                    <Key className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-sky-900">University Campus License (KMS Auto-Activation):</span>
-                      <p className="text-[11px] text-sky-800 mt-0.5">
-                        If you are using University Volume Licensing (KMS), you can leave this blank and click <strong>Skip</strong> or <strong>Next</strong>. Windows will automatically contact the campus KMS server.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="max-w-md space-y-2 text-xs">
-                    <label className="block font-semibold text-slate-700">Product key:</label>
-                    <input
-                      type="text"
-                      value={productKey}
-                      onChange={(e) => setProductKey(e.target.value)}
-                      className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest uppercase focus:outline-none focus:border-blue-600 shadow-inner"
-                      placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
-                    />
-
-                    <div className="flex items-center gap-2 pt-2">
-                      <input
-                        type="checkbox"
-                        id="autoact"
-                        checked={autoActivateOnline}
-                        onChange={(e) => setAutoActivateOnline(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                      />
-                      <label htmlFor="autoact" className="text-slate-700 text-xs cursor-pointer">
-                        Automatically activate Windows when I'm online
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between border-t border-slate-300 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => handleNextFromKey(true)}
-                    className="px-4 py-1.5 text-slate-700 hover:text-slate-900 font-semibold text-xs underline cursor-pointer"
-                  >
-                    Skip (Campus KMS License)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleNextFromKey(false)}
-                    className="px-6 py-1.5 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 border border-slate-400 rounded text-slate-900 font-bold text-xs shadow transition-all cursor-pointer"
-                  >
-                    <span className="underline">N</span>ext &rarr;
+                    Next
                   </button>
                 </div>
               </div>
-            )}
+            </form>
+          )}
 
-            {/* SCREEN 4: Help protect your computer and improve Windows automatically */}
-            {step === 'win7_updates' && (
-              <div className="space-y-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">Help protect your computer and improve Windows automatically</h2>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Use recommended settings to keep your computer up to date with the latest security definitions.
-                  </p>
+          {/* SCREEN 2: SET PASSWORD (win7_11.jpg) */}
+          {step === 'win7_password' && (
+            <form onSubmit={handleNextFromPassword} className="p-8 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                <h2 className="text-[17px] font-normal text-[#1E395B]">
+                  Set a password for your account
+                </h2>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  Creating a password is a smart security precaution that helps protect your user account from unwanted users. Be sure to remember your password or keep it in a safe place.
+                </p>
+
+                {passwordError && (
+                  <div className="p-2 bg-rose-50 border border-rose-300 text-rose-700 text-xs rounded">
+                    {passwordError}
+                  </div>
+                )}
+
+                <div className="space-y-3 pt-2 text-xs">
+                  <div>
+                    <label className="block text-slate-700 mb-1">Type a password (recommended):</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-80 bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 mb-1">Retype your password:</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-80 bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 mb-1">Type a password hint:</label>
+                    <input
+                      type="text"
+                      value={passwordHint}
+                      onChange={(e) => setPasswordHint(e.target.value)}
+                      className="w-80 bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-400"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1 max-w-md">
+                      Choose a word or phrase that helps you remember your password. If you forget your password, Windows will show you your hint.
+                    </p>
+                  </div>
                 </div>
+              </div>
 
-                <div className="space-y-3">
-                  {/* Recommended Settings */}
+              <div className="flex justify-end border-t border-slate-200 pt-4 text-xs mt-6">
+                <button
+                  type="submit"
+                  className="px-7 py-1 bg-gradient-to-b from-[#F2F2F2] via-[#EBEBEB] to-[#D4D4D4] border border-[#707070] hover:border-[#3C7FB1] hover:shadow-[0_0_6px_rgba(60,127,177,0.8)] active:bg-[#C8C8C8] text-black text-xs font-normal rounded-[3px] shadow-sm cursor-pointer transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* SCREEN 3: HELP PROTECT YOUR COMPUTER (win7_12.jpg) */}
+          {step === 'win7_updates' && (
+            <div className="p-8 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                <h2 className="text-[17px] font-normal text-[#1E395B]">
+                  Help protect your computer and improve Windows automatically
+                </h2>
+
+                <div className="space-y-3 pt-2">
+                  {/* Recommended Settings Card matching win7_12.jpg */}
                   <button
                     type="button"
                     onClick={() => handleSelectUpdateMode('recommended')}
-                    className="w-full text-left p-3.5 bg-white hover:bg-sky-50 border border-slate-300 hover:border-blue-400 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#A0A0A0]/60 hover:border-[#7DA2CE] hover:bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs"
                   >
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <ShieldCheck className="w-5 h-5" />
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                      <Check className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-blue-900 group-hover:text-blue-700">
+                      <h4 className="text-[#0066CC] text-xs font-normal group-hover:underline">
                         Use recommended settings
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        Install important and recommended updates, help make Internet browsing safer, check online for solutions to problems.
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        Install important and recommended updates, help make Internet browsing safer, check online for solutions to problems, and help Microsoft improve Windows.
                       </p>
                     </div>
                   </button>
 
-                  {/* Install important updates only */}
+                  {/* Install Important Updates Only Card */}
                   <button
                     type="button"
                     onClick={() => handleSelectUpdateMode('important')}
-                    className="w-full text-left p-3.5 bg-white hover:bg-sky-50 border border-slate-300 hover:border-blue-400 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#A0A0A0]/60 hover:border-[#7DA2CE] hover:bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs"
                   >
-                    <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <Shield className="w-5 h-5" />
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                      <Shield className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-blue-900 group-hover:text-blue-700">
+                      <h4 className="text-[#0066CC] text-xs font-normal group-hover:underline">
                         Install important updates only
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        Only install security and other critical updates for Windows.
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        Only install security updates and other important updates for Windows.
                       </p>
                     </div>
                   </button>
 
-                  {/* Ask me later */}
+                  {/* Ask Me Later Card */}
                   <button
                     type="button"
                     onClick={() => handleSelectUpdateMode('later')}
-                    className="w-full text-left p-3 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#A0A0A0]/60 hover:border-[#7DA2CE] hover:bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs"
                   >
-                    <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <HelpCircle className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                      <span className="text-xs font-bold">✕</span>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-slate-800">Ask me later</h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
+                      <h4 className="text-[#0066CC] text-xs font-normal group-hover:underline">
+                        Ask me later
+                      </h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
                         Until you decide, your computer might be vulnerable to security threats.
                       </p>
                     </div>
                   </button>
                 </div>
-
-                <div className="border-t border-slate-300 pt-3 text-[11px] text-slate-500">
-                  <span>Learn more about each option in Windows Help and Support.</span>
-                </div>
               </div>
-            )}
 
-            {/* SCREEN 5: Review your time and date settings */}
-            {step === 'win7_datetime' && (
-              <div className="space-y-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-4">
+              {/* Privacy text matching win7_12.jpg */}
+              <div className="border-t border-slate-200 pt-3 text-[10px] text-slate-500 leading-relaxed mt-4 space-y-1">
+                <p className="text-[#0066CC] hover:underline cursor-pointer">Learn more about each option</p>
+                <p>
+                  When you use recommended settings or install updates only, some information is sent to Microsoft. The information is not used to identify you or contact you. To turn off these settings later, search for 'Turn off recommended setting' in Help and Support. <span className="text-[#0066CC] hover:underline cursor-pointer">Read the privacy statement</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 4: REVIEW TIME AND DATE SETTINGS (win7_13.jpg) */}
+          {step === 'win7_datetime' && (
+            <div className="p-8 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                <h2 className="text-[17px] font-normal text-[#1E395B]">
+                  Review your time and date settings
+                </h2>
+
+                <div className="space-y-4 pt-1 text-xs">
                   <div>
-                    <h2 className="text-sm font-bold text-slate-900">Review your time and date settings</h2>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Set the current time zone, date, and local clock.
-                    </p>
+                    <label className="block text-slate-700 mb-1">Time zone:</label>
+                    <select
+                      value={timeZone}
+                      onChange={(e) => setTimeZone(e.target.value)}
+                      className="w-full max-w-md bg-white border border-[#7F9DB9] rounded-[2px] px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="(UTC-06:00) Central Time (US & Canada)">(UTC-06:00) Central Time (US & Canada)</option>
+                      <option value="(UTC-08:00) Pacific Time (US & Canada)">(UTC-08:00) Pacific Time (US & Canada)</option>
+                      <option value="(UTC-05:00) Eastern Time (US & Canada)">(UTC-05:00) Eastern Time (US & Canada)</option>
+                      <option value="(UTC+08:00) Manila, Taipei, Singapore">(UTC+08:00) Manila, Taipei, Singapore</option>
+                    </select>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="dst-check"
+                        checked={autoDst}
+                        onChange={(e) => setAutoDst(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                      />
+                      <label htmlFor="dst-check" className="text-slate-700 text-xs cursor-pointer select-none">
+                        Automatically adjust clock for Daylight Saving Time
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="space-y-4 text-xs">
-                    {/* Time Zone */}
+                  {/* Calendar and Clock matching win7_13.jpg */}
+                  <div className="grid grid-cols-2 gap-8 pt-3 max-w-md">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Time zone:</label>
-                      <select
-                        value={timeZone}
-                        onChange={(e) => setTimeZone(e.target.value)}
-                        className="w-full bg-white border border-slate-400 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-inner cursor-pointer"
-                      >
-                        <option value="(UTC-06:00) Central Time (US & Canada)">(UTC-06:00) Central Time (US & Canada)</option>
-                        <option value="(UTC-05:00) Eastern Time (US & Canada)">(UTC-05:00) Eastern Time (US & Canada)</option>
-                        <option value="(UTC-08:00) Pacific Time (US & Canada)">(UTC-08:00) Pacific Time (US & Canada)</option>
-                        <option value="(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi">(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi</option>
-                        <option value="(UTC+08:00) Manila, Taipei, Singapore">(UTC+08:00) Manila, Taipei, Singapore</option>
-                        <option value="(UTC+00:00) Dublin, Edinburgh, Lisbon, London">(UTC+00:00) Dublin, Edinburgh, Lisbon, London</option>
-                      </select>
-
-                      <div className="flex items-center gap-2 pt-2">
-                        <input
-                          type="checkbox"
-                          id="dst"
-                          checked={autoDst}
-                          onChange={(e) => setAutoDst(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                        />
-                        <label htmlFor="dst" className="text-slate-700 text-xs cursor-pointer">
-                          Automatically adjust clock for Daylight Saving Time
-                        </label>
+                      <span className="font-normal text-slate-700 block mb-2">Date:</span>
+                      <div className="border border-[#7F9DB9] p-2 bg-white text-center text-xs">
+                        <div className="font-semibold text-slate-800 pb-1 border-b border-slate-200">
+                          August, 2026
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 pt-1.5 text-[10px] text-slate-500 font-mono">
+                          <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 pt-1 text-[10px] text-slate-700 font-mono">
+                          <span className="text-slate-300">26</span><span className="text-slate-300">27</span><span className="text-slate-300">28</span><span className="text-slate-300">29</span><span className="text-slate-300">30</span><span className="text-slate-300">31</span><span>1</span>
+                          <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+                          <span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+                          <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span>
+                          <span>23</span><span>24</span><span>25</span><span className="bg-sky-100 border border-sky-400 font-bold text-blue-900 rounded-[1px]">26</span><span>27</span><span>28</span><span>29</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Date and Time Pickers */}
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div className="p-3 bg-white border border-slate-300 rounded">
-                        <span className="font-semibold text-slate-700 block mb-2 flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4 text-blue-600" /> Date
-                        </span>
-                        <input
-                          type="date"
-                          value={currentDate}
-                          onChange={(e) => setCurrentDate(e.target.value)}
-                          className="w-full border border-slate-300 rounded p-1.5 text-xs text-slate-800"
-                        />
-                      </div>
-
-                      <div className="p-3 bg-white border border-slate-300 rounded">
-                        <span className="font-semibold text-slate-700 block mb-2 flex items-center gap-1.5">
-                          <Clock className="w-4 h-4 text-blue-600" /> Time
-                        </span>
-                        <input
-                          type="time"
-                          value={currentTime}
-                          onChange={(e) => setCurrentTime(e.target.value)}
-                          className="w-full border border-slate-300 rounded p-1.5 text-xs text-slate-800"
-                        />
+                    <div>
+                      <span className="font-normal text-slate-700 block mb-2">Time:</span>
+                      <div className="flex flex-col items-center">
+                        {/* Windows 7 Analog Clock graphic matching win7_13.jpg */}
+                        <div className="w-24 h-24 rounded-full border-4 border-[#C8D8E8] shadow-inner bg-gradient-to-b from-white to-[#F0F4F8] relative flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate-800 z-10" />
+                          {/* Hour hand */}
+                          <div className="w-0.5 h-6 bg-slate-700 absolute top-6 origin-bottom transform rotate-[55deg]" />
+                          {/* Minute hand */}
+                          <div className="w-0.5 h-9 bg-slate-900 absolute top-3 origin-bottom transform rotate-[255deg]" />
+                          {/* Second hand */}
+                          <div className="w-[1px] h-10 bg-blue-600 absolute top-2 origin-bottom transform rotate-[130deg]" />
+                        </div>
+                        <div className="mt-2 flex items-center border border-[#7F9DB9] rounded-[2px] px-2 py-0.5 text-xs bg-white">
+                          <span>1:57:42 PM</span>
+                          <span className="ml-2 text-[8px] text-slate-400">▴▾</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-end border-t border-slate-300 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleNextFromDateTime}
-                    className="px-6 py-1.5 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 border border-slate-400 rounded text-slate-900 font-bold text-xs shadow transition-all cursor-pointer"
-                  >
-                    <span className="underline">N</span>ext &rarr;
-                  </button>
                 </div>
               </div>
-            )}
 
-            {/* SCREEN 6: Select your computer's current location */}
-            {step === 'win7_network' && (
-              <div className="space-y-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">Select your computer's current location</h2>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Windows will automatically apply the correct network security settings based on the network type.
-                  </p>
-                </div>
+              <div className="flex justify-end border-t border-slate-200 pt-4 text-xs mt-6">
+                <button
+                  type="button"
+                  onClick={handleNextFromDateTime}
+                  className="px-7 py-1 bg-gradient-to-b from-[#F2F2F2] via-[#EBEBEB] to-[#D4D4D4] border border-[#707070] hover:border-[#3C7FB1] hover:shadow-[0_0_6px_rgba(60,127,177,0.8)] active:bg-[#C8C8C8] text-black text-xs font-normal rounded-[3px] shadow-sm cursor-pointer transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
 
-                <div className="space-y-3">
-                  {/* Home network */}
+          {/* SCREEN 5: SELECT NETWORK LOCATION (win7_14.jpg) */}
+          {step === 'win7_network' && (
+            <div className="p-8 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                <h2 className="text-[17px] font-normal text-[#1E395B]">
+                  Select your computer's current location
+                </h2>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  This computer is connected to a network. Windows will automatically apply the correct network settings based on the network's location.
+                </p>
+
+                <div className="space-y-3 pt-2">
+                  {/* Home Network Card */}
                   <button
                     type="button"
                     onClick={() => handleSelectNetwork('home')}
-                    className="w-full text-left p-3.5 bg-white hover:bg-sky-50 border border-slate-300 hover:border-blue-400 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#A0A0A0]/60 hover:border-[#7DA2CE] hover:bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs"
                   >
-                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <Home className="w-5 h-5" />
+                    <div className="w-10 h-10 bg-amber-100 border border-amber-300 rounded-[2px] flex items-center justify-center shrink-0">
+                      <Home className="w-6 h-6 text-amber-800" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-blue-900 group-hover:text-blue-700">
+                      <h4 className="text-[#0066CC] text-xs font-normal group-hover:underline">
                         Home network
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        If all the computers on this network are at your home, and you recognize them. Network discovery is turned on.
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        If all the computers on this network are at your home, and you recognize them, this is a trusted home network. Don't choose this for public places such as coffee shops or airports.
                       </p>
                     </div>
                   </button>
 
-                  {/* Work network */}
+                  {/* Work Network Card (Highlighted as chosen in Illinois guide win7_14.jpg) */}
                   <button
                     type="button"
                     onClick={() => handleSelectNetwork('work')}
-                    className="w-full text-left p-3.5 bg-white hover:bg-sky-50 border border-slate-300 hover:border-blue-400 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#7DA2CE] bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs ring-1 ring-[#7DA2CE]"
                   >
-                    <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <Building2 className="w-5 h-5" />
+                    <div className="w-10 h-10 bg-blue-100 border border-blue-300 rounded-[2px] flex items-center justify-center shrink-0">
+                      <Building2 className="w-6 h-6 text-blue-800" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-blue-900 group-hover:text-blue-700">
+                      <h4 className="text-[#0066CC] text-xs font-semibold group-hover:underline">
                         Work network
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        If all the computers on this network are at your workplace or school campus. Network discovery is turned on.
+                      <p className="text-[11px] text-slate-700 mt-0.5 leading-relaxed">
+                        If all the computers on this network are at your workplace, and you recognize them, this is a trusted work network. Don't choose this for public places such as coffee shops or airports.
                       </p>
                     </div>
                   </button>
 
-                  {/* Public network */}
+                  {/* Public Network Card */}
                   <button
                     type="button"
                     onClick={() => handleSelectNetwork('public')}
-                    className="w-full text-left p-3.5 bg-white hover:bg-sky-50 border border-slate-300 hover:border-blue-400 rounded-lg flex items-start gap-3 transition-all cursor-pointer shadow-sm group"
+                    className="w-full text-left p-3.5 border border-[#A0A0A0]/60 hover:border-[#7DA2CE] hover:bg-[#F2F7FD] rounded-[2px] transition-all cursor-pointer group flex items-start gap-4 shadow-xs"
                   >
-                    <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      <Coffee className="w-5 h-5" />
+                    <div className="w-10 h-10 bg-stone-100 border border-stone-300 rounded-[2px] flex items-center justify-center shrink-0">
+                      <Coffee className="w-6 h-6 text-stone-700" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs text-blue-900 group-hover:text-blue-700">
+                      <h4 className="text-[#0066CC] text-xs font-normal group-hover:underline">
                         Public network
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        If you don't recognize all the computers on the network (such as in a coffee shop or airport).
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        If you don't recognize all the computers on the network (for example, you're in a coffee shop or airport, or you have mobile broadband), this is a public network and is not trusted.
                       </p>
                     </div>
                   </button>
                 </div>
+              </div>
 
-                <div className="border-t border-slate-300 pt-3 text-[11px] text-slate-500">
-                  <span>You can change this setting at any time in Network and Sharing Center.</span>
+              <div className="pt-4 text-[11px] text-slate-600">
+                If you aren't sure, select Public network.
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 6: WINDOWS IS FINALIZING YOUR SETTINGS (win7_15.jpg) */}
+          {step === 'win7_finalizing' && (
+            <div className="p-8 flex-1 flex flex-col justify-between items-center text-center">
+              <div className="pt-6 flex flex-col items-center space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-1 w-9 h-9 shrink-0">
+                    <div className="bg-[#EA3923] rounded-tl-[2px]" />
+                    <div className="bg-[#7FBA00] rounded-tr-[2px]" />
+                    <div className="bg-[#00A4EF] rounded-bl-[2px]" />
+                    <div className="bg-[#FFB900] rounded-br-[2px]" />
+                  </div>
+                  <h1 className="text-2xl font-light text-slate-900 tracking-wide">
+                    Windows 7 <span className="font-normal text-slate-800">Enterprise</span>
+                  </h1>
                 </div>
               </div>
-            )}
 
-            {/* SCREEN 7A: Windows is finalizing your settings */}
-            {step === 'win7_finalizing' && (
-              <div className="space-y-6 flex-1 flex flex-col justify-center items-center text-center py-12">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                <div className="space-y-1">
-                  <h3 className="text-base font-bold text-slate-900">Windows is finalizing your settings</h3>
-                  <p className="text-xs text-slate-500">Please wait while the system completes configuration...</p>
+              <div className="my-auto space-y-3 w-full max-w-sm">
+                <p className="text-sm font-normal text-slate-800">
+                  Windows is finalizing your settings
+                </p>
+                {/* Windows 7 Animated Indeterminate Green Bar matching win7_15.jpg */}
+                <div className="w-full h-3 bg-[#E0E0E0] rounded-[2px] overflow-hidden p-[1px] border border-[#A0A0A0]">
+                  <div className="h-full bg-gradient-to-r from-[#88DE75] via-[#4BB834] to-[#88DE75] animate-pulse rounded-[1px] w-full" />
                 </div>
               </div>
-            )}
 
-            {/* SCREEN 7B: Welcome Screen */}
-            {step === 'win7_welcome' && (
-              <div className="space-y-6 flex-1 flex flex-col justify-center items-center text-center py-12">
-                <div className="w-20 h-20 bg-gradient-to-tr from-sky-400 to-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-sky-500/30">
-                  <User className="w-10 h-10" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-blue-950">Welcome</h3>
-                  <p className="text-sm font-semibold text-slate-700">{username}</p>
-                </div>
+              <div className="pb-4 text-xs text-slate-400">
+                Please wait...
               </div>
-            )}
+            </div>
+          )}
 
-            {/* SCREEN 7C: Preparing your desktop */}
-            {step === 'win7_preparing' && (
-              <div className="space-y-6 flex-1 flex flex-col justify-center items-center text-center py-12">
-                <Sparkles className="w-10 h-10 text-sky-500 animate-pulse mx-auto" />
-                <div className="space-y-1">
-                  <h3 className="text-base font-bold text-slate-900">Preparing your desktop...</h3>
-                  <p className="text-xs text-slate-500">Evaluating configuration accuracy and generating rubric score...</p>
-                </div>
-              </div>
-            )}
-
-          </div>
         </div>
       </div>
     );
